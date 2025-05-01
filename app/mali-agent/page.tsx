@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Mic, Send } from "lucide-react"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
+import { toast } from "@/components/ui/use-toast"
 
 interface Message {
   role: "user" | "assistant"
@@ -21,6 +22,7 @@ export default function MaliAgent() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
 
   const translations = {
     en: {
@@ -55,6 +57,19 @@ export default function MaliAgent() {
 
   const t = translations[language]
 
+  // Clean text for display - remove markdown and HTML tags
+  const cleanTextForDisplay = (text: string): string => {
+    // Replace markdown with proper formatting but don't show the actual markdown characters
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "$1") // Remove ** but keep the content
+      .replace(/\*(.*?)\*/g, "$1") // Remove * but keep the content
+      .replace(/<strong>(.*?)<\/strong>/g, "$1") // Remove <strong> tags but keep content
+      .replace(/<em>(.*?)<\/em>/g, "$1") // Remove <em> tags but keep content
+      .replace(/^#\s+/gm, "") // Remove heading markers
+      .replace(/^-\s+/gm, "• ") // Replace list items with bullets
+      .trim()
+  }
+
   useEffect(() => {
     // Set initial welcome message in the selected language
     const welcomeMessage =
@@ -70,21 +85,94 @@ export default function MaliAgent() {
     ])
   }, [language])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
+  const handleVoiceInput = () => {
+    // Check if browser supports speech recognition
+    if (typeof window === "undefined") return
 
-    const userMessage: Message = { role: "user", content: input }
-    setMessages((prev) => [...prev, userMessage])
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      toast({
+        title: language === "en" ? "Not Supported" : "سپورٹ نہیں ہے",
+        description:
+          language === "en"
+            ? "Speech recognition is not supported in your browser."
+            : "آپ کے براؤزر میں اسپیچ ریکگنیشن سپورٹ نہیں ہے۔",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsRecording(true)
+      toast({
+        title: language === "en" ? "Listening..." : "سن رہا ہے...",
+        description: language === "en" ? "Speak now" : "اب بولیں",
+      })
+
+      const recognition = new SpeechRecognition()
+      recognition.lang = language === "en" ? "en-US" : "ur-PK"
+      recognition.continuous = false
+      recognition.interimResults = false
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript
+        setInput(transcript)
+        setIsRecording(false)
+
+        // Submit the form with the transcript
+        const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+        handleSubmit(fakeEvent, transcript)
+      }
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error)
+        setIsRecording(false)
+        toast({
+          title: language === "en" ? "Error" : "خرابی",
+          description:
+            language === "en"
+              ? "Failed to recognize speech. Please try again."
+              : "تقریر کو پہچاننے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
+          variant: "destructive",
+        })
+      }
+
+      recognition.onend = () => {
+        setIsRecording(false)
+      }
+
+      recognition.start()
+    } catch (error) {
+      console.error("Speech recognition error:", error)
+      setIsRecording(false)
+      toast({
+        title: language === "en" ? "Error" : "خرابی",
+        description:
+          language === "en"
+            ? "Failed to start speech recognition. Please try again."
+            : "اسپیچ ریکگنیشن شروع کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent, voiceInput = "") => {
+    e.preventDefault()
+    const userMessage = voiceInput || input
+    if (!userMessage.trim() || isLoading) return
+
+    const userMessageObj: Message = { role: "user", content: userMessage }
+    setMessages((prev) => [...prev, userMessageObj])
     setInput("")
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/chatbot", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: userMessage.content,
+          messages: [...messages, userMessageObj],
           language: language,
         }),
       })
@@ -93,30 +181,26 @@ export default function MaliAgent() {
 
       const data = await response.json()
 
-      // Format the response to preserve important formatting
-      const formattedText = data.response
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.*?)\*/g, "<em>$1</em>")
-        .replace(/^-\s+/gm, "• ")
+      if (data.error) throw new Error(data.error)
 
-      setMessages((prev) => [...prev, { role: "assistant", content: formattedText }])
+      setMessages((prev) => [...prev, { role: "assistant", content: data.text || "" }])
     } catch (error) {
       console.error("Error:", error)
       // Fallback responses in case of API failure
       const fallbackResponses =
         language === "en"
           ? [
-              "Based on your **soil analysis**, I recommend reducing nitrogen application by 15% and increasing potassium levels.",
+              "Based on your soil analysis, I recommend reducing nitrogen application by 15% and increasing potassium levels.",
               "The current weather forecast shows a 70% chance of rain in the next 48 hours. Consider delaying your pesticide application.",
-              "For your wheat crop at this growth stage, I recommend monitoring for **rust disease** as conditions are favorable for its development.",
-              "Your **soil moisture levels** are optimal. Maintain your current irrigation schedule for the next week.",
+              "For your wheat crop at this growth stage, I recommend monitoring for rust disease as conditions are favorable for its development.",
+              "Your soil moisture levels are optimal. Maintain your current irrigation schedule for the next week.",
               "Based on historical data and current conditions, the optimal planting time for your region would be in approximately 2 weeks.",
             ]
           : [
-              "آپ کی **مٹی کے تجزیہ** کی بنیاد پر، میں نائٹروجن کی ایپلیکیشن کو 15% کم کرنے اور پوٹاشیم کی سطح بڑھانے کی تجویز کرتا ہوں۔",
+              "آپ کی مٹی کے تجزیہ کی بنیاد پر، میں نائٹروجن کی ایپلیکیشن کو 15% کم کرنے اور پوٹاشیم کی سطح بڑھانے کی تجویز کرتا ہوں۔",
               "موجودہ موسم کی پیش گوئی اگلے 48 گھنٹوں میں بارش کا 70% امکان ظاہر کرتی ہے۔ اپنے کیڑے مار دوا کے استعمال میں تاخیر پر غور کریں۔",
-              "اس نشوونما کے مرحلے پر آپ کی گندم کی فصل کے لیے، میں **زنگ کی بیماری** کی نگرانی کی تجویز کرتا ہوں کیونکہ حالات اس کی نشوونما کے لیے سازگار ہیں۔",
-              "آپ کی **مٹی کی نمی کی سطح** مثالی ہے۔ اگلے ہفتے کے لیے اپنی موجودہ آبپاشی کا شیڈول برقرار رکھیں۔",
+              "اس نشوونما کے مرحلے پر آپ کی گندم کی فصل کے لیے، میں زنگ کی بیماری کی نگرانی کی تجویز کرتا ہوں کیونکہ حالات اس کی نشوونما کے لیے سازگار ہیں۔",
+              "آپ کی مٹی کی نمی کی سطح مثالی ہے۔ اگلے ہفتے کے لیے اپنی موجودہ آبپاشی کا شیڈول برقرار رکھیں۔",
               "تاریخی اعداد و شمار اور موجودہ حالات کی بنیاد پر، آپ کے علاقے کے لیے بہترین کاشت کا وقت تقریباً 2 ہفتوں میں ہوگا۔",
             ]
 
@@ -157,7 +241,7 @@ export default function MaliAgent() {
                         ? "Mali Agent:"
                         : "مالی ایجنٹ:"}
                   </p>
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm">{cleanTextForDisplay(message.content)}</p>
                 </div>
               ))}
               {isLoading && (
@@ -171,15 +255,22 @@ export default function MaliAgent() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={t.placeholder}
-                disabled={isLoading}
+                disabled={isLoading || isRecording}
                 className="flex-1"
+                dir={language === "ur" ? "rtl" : "ltr"}
               />
-              <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
+              <Button type="submit" disabled={isLoading || isRecording} className="bg-green-600 hover:bg-green-700">
                 <Send className="h-4 w-4" />
                 <span className="sr-only">{t.send}</span>
               </Button>
-              <Button type="button" variant="outline" disabled={isLoading}>
-                <Mic className="h-4 w-4" />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isLoading || isRecording}
+                onClick={handleVoiceInput}
+                className={`border-green-600 text-green-600 hover:bg-green-50 ${isRecording ? "bg-red-50" : ""}`}
+              >
+                {isRecording ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                 <span className="sr-only">{t.voice}</span>
               </Button>
             </form>

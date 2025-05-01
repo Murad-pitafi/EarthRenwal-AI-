@@ -17,6 +17,9 @@ export async function POST(req: Request) {
       Focus on providing practical farming advice, crop management techniques, soil health recommendations,
       pest control strategies, and sustainable agricultural practices.
       
+      IMPORTANT: Do NOT use any formatting like markdown or HTML tags in your response. 
+      Provide plain text responses only.
+      
       If asked about weather, provide general agricultural implications rather than specific forecasts.
       
       User query: ${lastMessage.content}

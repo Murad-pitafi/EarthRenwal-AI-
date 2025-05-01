@@ -78,11 +78,11 @@ export default function Chatbot() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/chatbot", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: userMessage,
+          messages: [...messages, newUserMessage],
           language: language,
         }),
       })
@@ -95,14 +95,14 @@ export default function Chatbot() {
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.response || "",
+        content: data.text || "",
       }
 
       setMessages((prev) => [...prev, assistantMessage])
 
       // Generate speech from the response
-      if (data.response) {
-        speakText(cleanTextForDisplay(data.response))
+      if (data.text) {
+        speakText(cleanTextForDisplay(data.text))
       }
     } catch (error) {
       console.error("Chat error:", error)
@@ -148,6 +148,10 @@ export default function Chatbot() {
 
     try {
       setIsRecording(true)
+      toast({
+        title: language === "en" ? "Listening..." : "سن رہا ہے...",
+        description: language === "en" ? "Speak now" : "اب بولیں",
+      })
 
       const recognition = new SpeechRecognition()
       recognition.lang = language === "en" ? "en-US" : "ur-PK"
@@ -275,9 +279,7 @@ export default function Chatbot() {
                     ? "Mali Agent:"
                     : "مالی ایجنٹ:"}
               </p>
-              <p className="text-sm whitespace-pre-line">
-                {message.content.split("**").map((part, i) => (i % 2 === 0 ? part : <strong key={i}>{part}</strong>))}
-              </p>
+              <p className="text-sm whitespace-pre-line">{cleanTextForDisplay(message.content)}</p>
             </div>
           ))}
           {isLoading && (
