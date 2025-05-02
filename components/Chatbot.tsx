@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Mic, Send, Volume2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
+import { v4 as uuidv4 } from "uuid"
 
 interface Message {
   role: "user" | "assistant"
@@ -19,20 +20,13 @@ interface Message {
 
 export default function Chatbot() {
   const { language, setLanguage } = useUser()
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        language === "en"
-          ? "Hello! I'm your agricultural AI assistant. How can I help with your farming needs today?"
-          : "السلام علیکم! میں آپ کا زرعی اے آئی اسسٹنٹ ہوں۔ آج میں آپ کی کاشتکاری کی ضروریات میں کیسے مدد کر سکتا ہوں؟",
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [sessionId, setSessionId] = useState<string>("")
 
   // Clean text for display - remove markdown and HTML tags
   const cleanTextForDisplay = (text: string): string => {
@@ -46,6 +40,27 @@ export default function Chatbot() {
       .replace(/^-\s+/gm, "• ") // Replace list items with bullets
       .trim()
   }
+
+  useEffect(() => {
+    // Generate a session ID if one doesn't exist
+    if (!sessionId) {
+      const newSessionId = uuidv4()
+      setSessionId(newSessionId)
+
+      // Store in localStorage for persistence
+      if (typeof window !== "undefined") {
+        localStorage.setItem("chatSessionId", newSessionId)
+      }
+    }
+
+    // Load session ID from localStorage if available
+    if (typeof window !== "undefined" && !sessionId) {
+      const storedSessionId = localStorage.getItem("chatSessionId")
+      if (storedSessionId) {
+        setSessionId(storedSessionId)
+      }
+    }
+  }, [sessionId])
 
   useEffect(() => {
     // Update welcome message when language changes
@@ -84,6 +99,7 @@ export default function Chatbot() {
         body: JSON.stringify({
           messages: [...messages, newUserMessage],
           language: language,
+          sessionId: sessionId,
         }),
       })
 

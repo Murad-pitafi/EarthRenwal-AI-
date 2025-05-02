@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, Leaf, Microscope, Award, ImageIcon, BarChart } from "lucide-react"
 import { MediaGallerySlider } from "@/components/MediaGallerySlider"
 import { useUser } from "@/contexts/UserContext"
+import { CollaborationSection } from "@/components/CollaborationSection"
 
 export default function Home() {
   const { language } = useUser()
@@ -42,6 +43,8 @@ export default function Home() {
       fieldWorkTitle: "Field Work & Community Engagement",
       ourAchievements: "Our Achievements",
       awardsTitle: "Awards & Recognition",
+      ourCollaborations: "Our Collaborations",
+      viewCollaborations: "View All Collaborations",
     },
     ur: {
       heroTitle: "ارتھ رینیوول۔اے آئی",
@@ -71,6 +74,8 @@ export default function Home() {
       fieldWorkTitle: "فیلڈ ورک اور کمیونٹی انگیجمنٹ",
       ourAchievements: "ہماری کامیابیاں",
       awardsTitle: "ایوارڈز اور اعتراف",
+      ourCollaborations: "ہماری شراکت داریاں",
+      viewCollaborations: "تمام شراکت داریاں دیکھیں",
     },
   }
 
@@ -193,6 +198,21 @@ export default function Home() {
           <Button asChild className="bg-white text-green-700 hover:bg-green-50">
             <Link href="/about">{t.learnAboutJourney}</Link>
           </Button>
+        </div>
+      </section>
+
+      {/* Collaborations Section */}
+      <section className="py-8 bg-gradient-to-b from-white to-green-50 rounded-xl">
+        <div className="container mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold">{t.ourCollaborations}</h2>
+            <Button asChild variant="outline" className="text-green-600 border-green-600 hover:bg-green-50">
+              <Link href="/collaborations">
+                {t.viewCollaborations} <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <CollaborationSection />
         </div>
       </section>
 

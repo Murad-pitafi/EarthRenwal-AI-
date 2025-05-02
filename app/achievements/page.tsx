@@ -11,17 +11,17 @@ export default function Achievements() {
   const translations = {
     en: {
       title: "Our Achievements",
-      impact: "Recognition & Impact",
-      farmers: "Farmers Assisted",
-      awards: "Awards & Recognitions",
-      yield: "Average Yield Improvement",
+      vision: "Our Vision & Goals",
+      farmers: "Farmers We Aim to Assist",
+      awards: "Future Milestones",
+      yield: "Target Yield Improvement",
     },
     ur: {
       title: "ہماری کامیابیاں",
-      impact: "تسلیم اور اثر",
-      farmers: "مدد کیے گئے کسان",
-      awards: "ایوارڈز اور اعترافات",
-      yield: "اوسط پیداوار میں بہتری",
+      vision: "ہمارا وژن اور اہداف",
+      farmers: "کسان جنہیں ہم مدد کرنا چاہتے ہیں",
+      awards: "مستقبل کے سنگ میل",
+      yield: "ہدف پیداوار میں بہتری",
     },
   }
 
@@ -29,31 +29,31 @@ export default function Achievements() {
 
   const achievements = [
     {
-      title: language === "en" ? "IEEEP Fair 2024 Recognition" : "آئی ای ای ای پی میلہ 2024 کا اعتراف",
+      title: language === "en" ? "IEEEP Fair 2024 Participation" : "آئی ای ای ای پی میلہ 2024 میں شرکت",
       description:
         language === "en"
-          ? "Recognized for innovation in agricultural technology at the IEEEP Fair 2024 in Karachi."
-          : "کراچی میں آئی ای ای ای پی میلہ 2024 میں زرعی ٹیکنالوجی میں جدت کے لیے تسلیم کیا گیا۔",
+          ? "Showcasing our agricultural technology innovations at the upcoming IEEEP Fair 2024 in Karachi."
+          : "کراچی میں آنے والے آئی ای ای ای پی میلہ 2024 میں اپنی زرعی ٹیکنالوجی کی جدت کا مظاہرہ کرنا۔",
       image: "/images/achievements_1.jpg",
       date: language === "en" ? "September 2024" : "ستمبر 2024",
       icon: Trophy,
     },
     {
-      title: language === "en" ? "EarthRenewal.AI Presentation" : "ارتھ رینیوول۔اے آئی پریزنٹیشن",
+      title: language === "en" ? "EarthRenewal.AI Launch" : "ارتھ رینیوول۔اے آئی لانچ",
       description:
         language === "en"
-          ? "Presented our Smart Farming solutions at the Agricultural Innovation Conference 2024."
-          : "زرعی جدت کانفرنس 2024 میں اپنے سمارٹ فارمنگ حل پیش کیے۔",
+          ? "Official launch of our Smart Farming solutions at the Agricultural Innovation Conference 2024."
+          : "زرعی جدت کانفرنس 2024 میں اپنے سمارٹ فارمنگ حل کا سرکاری آغاز۔",
       image: "/images/achievements_2.jpg",
       date: language === "en" ? "August 2024" : "اگست 2024",
       icon: Award,
     },
     {
-      title: language === "en" ? "Zindigi Prize Finalist" : "زندگی پرائز فائنلسٹ",
+      title: language === "en" ? "Zindigi Prize Application" : "زندگی پرائز کی درخواست",
       description:
         language === "en"
-          ? "Selected as a finalist for the Zindigi Prize for sustainable technology solutions."
-          : "پائیدار ٹیکنالوجی حل کے لیے زندگی پرائز کے فائنلسٹ کے طور پر منتخب کیا گیا۔",
+          ? "Applying for the Zindigi Prize for sustainable technology solutions to support our growth."
+          : "اپنی ترقی کی حمایت کے لیے پائیدار ٹیکنالوجی حل کے لیے زندگی پرائز کے لیے درخواست دینا۔",
       image: "/images/media_gallery_3.jpg",
       date: language === "en" ? "July 2024" : "جولائی 2024",
       icon: Medal,
@@ -72,7 +72,7 @@ export default function Achievements() {
 
       <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
         <CardHeader>
-          <CardTitle className="text-center">{t.impact}</CardTitle>
+          <CardTitle className="text-center">{t.vision}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">

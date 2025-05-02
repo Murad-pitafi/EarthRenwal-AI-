@@ -56,8 +56,14 @@ export function AchievementsSlider({ achievements }: AchievementsSliderProps) {
 
   return (
     <Card className="relative overflow-hidden">
-      <div className="relative h-48 w-full">
-        <Image src={achievement.image || "/placeholder.svg"} alt={achievement.title} fill className="object-cover" />
+      <div className="relative h-64 w-full">
+        <Image
+          src={achievement.image || "/placeholder.svg"}
+          alt={achievement.title}
+          fill
+          className="object-contain"
+          sizes="(max-width: 768px) 100vw, 50vw"
+        />
       </div>
       <CardHeader>
         <div className="flex items-center gap-2">
@@ -73,7 +79,7 @@ export function AchievementsSlider({ achievements }: AchievementsSliderProps) {
       <Button
         variant="outline"
         size="icon"
-        className="absolute left-2 top-24 -translate-y-1/2 z-10 bg-white/80 hover:bg-white"
+        className="absolute left-2 top-32 -translate-y-1/2 z-10 bg-white/80 hover:bg-white"
         onClick={goToPrevious}
       >
         <ChevronLeft className="h-6 w-6" />
@@ -83,7 +89,7 @@ export function AchievementsSlider({ achievements }: AchievementsSliderProps) {
       <Button
         variant="outline"
         size="icon"
-        className="absolute right-2 top-24 -translate-y-1/2 z-10 bg-white/80 hover:bg-white"
+        className="absolute right-2 top-32 -translate-y-1/2 z-10 bg-white/80 hover:bg-white"
         onClick={goToNext}
       >
         <ChevronRight className="h-6 w-6" />

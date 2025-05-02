@@ -69,7 +69,8 @@ export function MediaGallerySlider({ images, autoPlay = true, interval = 5000, t
               src={image || "/placeholder.svg"}
               alt={`Gallery image ${index + 1}`}
               fill
-              className="object-cover"
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 50vw"
               priority={index === 0}
             />
           </div>

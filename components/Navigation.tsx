@@ -5,39 +5,61 @@ import { usePathname } from "next/navigation"
 import { useUser } from "@/contexts/UserContext"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Home, Microscope, Award, Cloud, MessageSquare, ImageIcon, Phone, BarChart } from "lucide-react"
+import {
+  Home,
+  Microscope,
+  Award,
+  Cloud,
+  MessageSquare,
+  ImageIcon,
+  Phone,
+  BarChart,
+  Menu,
+  ChevronDown,
+} from "lucide-react"
 import Image from "next/image"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useState } from "react"
 
 export function Navigation() {
   const pathname = usePathname()
   const { language } = useUser()
+  const [isOpen, setIsOpen] = useState(false)
 
   const translations = {
     en: {
       home: "Home",
       maliAgent: "Mali Agent AI",
+      services: "Services",
       soilAnalysis: "Soil Analysis",
       mediaGallery: "Media Gallery",
       achievements: "Achievements",
       weather: "Weather",
       contact: "Contact",
       riceStats: "Rice Statistics",
+      precisionFarming: "Precision Farming",
+      soilMonitoring: "Soil Monitoring",
+      collaborations: "Collaborations",
     },
     ur: {
       home: "ہوم",
       maliAgent: "مالی ایجنٹ اے آئی",
+      services: "خدمات",
       soilAnalysis: "مٹی کا تجزیہ",
       mediaGallery: "میڈیا گیلری",
       achievements: "کامیابیاں",
       weather: "موسم",
       contact: "رابطہ",
       riceStats: "چاول کے اعداد و شمار",
+      precisionFarming: "درست کاشتکاری",
+      soilMonitoring: "مٹی کی نگرانی",
+      collaborations: "شراکت داریاں",
     },
   }
 
   const t = translations[language]
 
-  const routes = [
+  const mainRoutes = [
     {
       href: "/",
       label: t.home,
@@ -48,6 +70,24 @@ export function Navigation() {
       label: t.maliAgent,
       icon: MessageSquare,
     },
+    {
+      href: "/collaborations",
+      label: t.collaborations,
+      icon: Award,
+    },
+    {
+      href: "/weather",
+      label: t.weather,
+      icon: Cloud,
+    },
+    {
+      href: "/contact",
+      label: t.contact,
+      icon: Phone,
+    },
+  ]
+
+  const serviceRoutes = [
     {
       href: "/soil-analysis",
       label: t.soilAnalysis,
@@ -69,14 +109,14 @@ export function Navigation() {
       icon: Award,
     },
     {
-      href: "/weather",
-      label: t.weather,
-      icon: Cloud,
+      href: "/precision-farming",
+      label: t.precisionFarming,
+      icon: Microscope,
     },
     {
-      href: "/contact",
-      label: t.contact,
-      icon: Phone,
+      href: "/soil-monitoring",
+      label: t.soilMonitoring,
+      icon: Microscope,
     },
   ]
 
@@ -88,7 +128,7 @@ export function Navigation() {
       </Link>
 
       <nav className="flex items-center space-x-1 lg:space-x-2 overflow-x-auto">
-        {routes.map((route) => {
+        {mainRoutes.map((route) => {
           const Icon = route.icon
           return (
             <Button
@@ -108,6 +148,47 @@ export function Navigation() {
             </Button>
           )
         })}
+
+        {/* Services Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "flex flex-col md:flex-row items-center gap-1 h-auto py-2",
+                serviceRoutes.some((route) => pathname === route.href)
+                  ? "text-green-600 bg-green-50"
+                  : "text-muted-foreground hover:text-green-600",
+              )}
+            >
+              <Menu className="h-4 w-4" />
+              <span className="text-xs md:text-sm flex items-center">
+                {t.services}
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {serviceRoutes.map((route) => {
+              const Icon = route.icon
+              return (
+                <DropdownMenuItem key={route.href} asChild>
+                  <Link
+                    href={route.href}
+                    className={cn(
+                      "flex items-center gap-2 w-full px-2 py-1.5",
+                      pathname === route.href ? "text-green-600 bg-green-50" : "",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{route.label}</span>
+                  </Link>
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </nav>
     </div>
   )
