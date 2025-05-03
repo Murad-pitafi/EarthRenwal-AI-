@@ -4,6 +4,7 @@ import { useUser } from "@/contexts/UserContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
 import { Leaf, Users, Target, Award, Globe, Sprout, BarChart2 } from "lucide-react"
+import { DataCollectionSection } from "@/components/DataCollectionSection"
 
 export default function About() {
   const { language } = useUser()
@@ -48,22 +49,26 @@ export default function About() {
         {
           name: "Muhammad Murad",
           position: "CEO & CTO | Founder",
-          bio: "Agricultural technology expert with a passion for sustainable farming solutions.",
+          bio: "AI Engineer",
+          image: "/images/team/murad.png",
         },
         {
           name: "Nizamuldin",
           position: "CAIO | Co-Founder",
-          bio: "AI specialist focused on developing intelligent systems for agricultural applications.",
+          bio: "AI Engineer",
+          image: "/images/team/nizam.png",
         },
         {
           name: "Ahmed",
           position: "CPO | Co-Founder",
-          bio: "Product strategist with extensive experience in agricultural innovation.",
+          bio: "AI Engineer",
+          image: "/images/team/ahmed.png",
         },
         {
           name: "Dr. Muhammad Farrukh Shahid",
           position: "Technical Advisor | Mentor",
-          bio: "Academic researcher specializing in sustainable agricultural practices and technology integration.",
+          bio: "Assistant Professor",
+          image: "/images/team/farrukh.png",
         },
       ],
       journey: "Our Journey",
@@ -79,7 +84,7 @@ export default function About() {
           description: "Released our flagship AI agricultural assistant to support Pakistani farmers",
         },
         {
-          year: "2024",
+          year: "2025",
           title: "Strategic Partnerships",
           description: "Formed key partnerships with ZettaMight and Agro TechVision to expand our reach",
         },
@@ -124,22 +129,26 @@ export default function About() {
         {
           name: "محمد مراد",
           position: "سی ای او اور سی ٹی او | بانی",
-          bio: "پائیدار کاشتکاری حل کے لیے جذبے کے ساتھ زرعی ٹیکنالوجی کے ماہر۔",
+          bio: "اے آئی انجینئر",
+          image: "/images/team/murad.png",
         },
         {
           name: "نظام الدین",
           position: "سی اے آئی او | شریک بانی",
-          bio: "زرعی ایپلیکیشنز کے لیے ذہین سسٹم تیار کرنے پر توجہ مرکوز کرنے والے اے آئی اسپیشلسٹ۔",
+          bio: "اے آئی انجینئر",
+          image: "/images/team/nizam.png",
         },
         {
           name: "احمد",
           position: "سی پی او | شریک بانی",
-          bio: "زرعی جدت میں وسیع تجربے کے ساتھ پروڈکٹ اسٹریٹجسٹ۔",
+          bio: "اے آئی انجینئر",
+          image: "/images/team/ahmed.png",
         },
         {
           name: "ڈاکٹر محمد فرخ شاہد",
           position: "ٹیکنیکل ایڈوائزر | مینٹر",
-          bio: "پائیدار زرعی طریقوں اور ٹیکنالوجی انضمام میں مہارت رکھنے والے اکیڈمک محقق۔",
+          bio: "اسسٹنٹ پروفیسر",
+          image: "/images/team/farrukh.png",
         },
       ],
       journey: "ہمارا سفر",
@@ -155,7 +164,7 @@ export default function About() {
           description: "پاکستانی کسانوں کی مدد کے لیے اپنا فلیگ شپ اے آئی زرعی اسسٹنٹ جاری کیا",
         },
         {
-          year: "2024",
+          year: "2025",
           title: "اسٹریٹجک پارٹنرشپس",
           description: "اپنی پہنچ کو بڑھانے کے لیے زیٹامائٹ اور ایگرو ٹیک ویژن کے ساتھ اہم شراکت داریاں قائم کیں",
         },
@@ -263,7 +272,7 @@ export default function About() {
                 <div className="flex flex-col items-center text-center">
                   <div className="w-24 h-24 rounded-full overflow-hidden mb-4 bg-green-100 flex items-center justify-center">
                     <Image
-                      src="/diverse-group.png"
+                      src={member.image || "/placeholder.svg"}
                       alt={member.name}
                       width={100}
                       height={100}
@@ -394,6 +403,8 @@ export default function About() {
           </ul>
         </div>
       </section>
+
+      <DataCollectionSection />
 
       {/* Image Section */}
       <div className="relative h-64 md:h-80 rounded-lg overflow-hidden">

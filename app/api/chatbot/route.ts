@@ -9,24 +9,24 @@ export async function POST(req: Request) {
     const { query, language } = await req.json()
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
-    // Create a farming-specific prompt with context and formatting instructions
+    // Update the prompt to include formatting instructions
     const prompt = `
-      You are Mali Agent, an AI assistant specializing in agriculture and soil science.
-      Respond in ${language === "ur" ? "Urdu" : "English"} language.
-      
-      Focus on providing practical farming advice, crop management techniques, soil health recommendations,
-      pest control strategies, and sustainable agricultural practices.
-      
-      IMPORTANT: Format your response using markdown:
-      - Use double asterisks for bold text like **soil quality**, **crop rotation**, **pest control**, etc.
-      - Make sure to highlight important agricultural terms with bold formatting
-      - DO NOT use HTML tags like <strong> or <em>
-      - Use plain text with double asterisks for bold, like: **soil health** is important
-      
-      If asked about weather, provide general agricultural implications rather than specific forecasts.
-      
-      User query: ${query}
-    `
+  You are Mali Agent, an AI assistant specializing in agriculture and soil science.
+  Respond in ${language === "ur" ? "Urdu" : "English"} language.
+  
+  Focus on providing practical farming advice, crop management techniques, soil health recommendations,
+  pest control strategies, and sustainable agricultural practices.
+  
+  Format your response with:
+  - Clear paragraphs with line breaks between them
+  - Use ** for important terms (like **crop rotation**, **soil health**, etc.)
+  - Use bullet points for lists when appropriate
+  - Organize information in a structured, easy-to-read manner
+  
+  If asked about weather, provide general agricultural implications rather than specific forecasts.
+  
+  User query: ${query}
+`
 
     const result = await model.generateContent(prompt)
     const response = await result.response

@@ -30,14 +30,9 @@ export default function Chatbot() {
 
   // Clean text for display - remove markdown and HTML tags
   const cleanTextForDisplay = (text: string): string => {
-    // Replace markdown with proper formatting but don't show the actual markdown characters
+    // Replace markdown with proper formatting but preserve structure
     return text
       .replace(/\*\*(.*?)\*\*/g, "$1") // Remove ** but keep the content
-      .replace(/\*(.*?)\*/g, "$1") // Remove * but keep the content
-      .replace(/<strong>(.*?)<\/strong>/g, "$1") // Remove <strong> tags but keep content
-      .replace(/<em>(.*?)<\/em>/g, "$1") // Remove <em> tags but keep content
-      .replace(/^#\s+/gm, "") // Remove heading markers
-      .replace(/^-\s+/gm, "• ") // Replace list items with bullets
       .trim()
   }
 
@@ -219,6 +214,14 @@ export default function Chatbot() {
   const speakText = (text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       console.error("Text-to-speech not supported")
+      toast({
+        title: language === "en" ? "Speech Not Supported" : "تقریر سپورٹ نہیں ہے",
+        description:
+          language === "en"
+            ? "Your browser does not support text-to-speech."
+            : "آپ کا براؤزر ٹیکسٹ ٹو سپیچ کو سپورٹ نہیں کرتا۔",
+        variant: "destructive",
+      })
       return
     }
 
@@ -228,7 +231,21 @@ export default function Chatbot() {
       setIsSpeaking(true)
 
       const utterance = new SpeechSynthesisUtterance(text)
+
+      // Set language based on current app language
       utterance.lang = language === "en" ? "en-US" : "ur-PK"
+
+      // Try to find an appropriate voice
+      const voices = window.speechSynthesis.getVoices()
+      const languageVoices = voices.filter((voice) =>
+        language === "en" ? voice.lang.startsWith("en") : voice.lang.startsWith("ur"),
+      )
+
+      // Use a language-specific voice if available, otherwise use default
+      if (languageVoices.length > 0) {
+        utterance.voice = languageVoices[0]
+      }
+
       utterance.rate = 1.0
       utterance.pitch = 1.0
 
@@ -240,14 +257,46 @@ export default function Chatbot() {
       utterance.onerror = (event) => {
         console.error("Speech synthesis error:", event)
         setIsSpeaking(false)
+        toast({
+          title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
+          description:
+            language === "en"
+              ? "An error occurred during speech synthesis."
+              : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+          variant: "destructive",
+        })
       }
 
       window.speechSynthesis.speak(utterance)
+
+      // Safety timeout in case onend doesn't fire
+      setTimeout(() => {
+        if (isSpeaking) {
+          setIsSpeaking(false)
+        }
+      }, 15000)
     } catch (error) {
       console.error("Error in text-to-speech:", error)
       setIsSpeaking(false)
+      toast({
+        title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
+        description:
+          language === "en"
+            ? "An error occurred during speech synthesis."
+            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+        variant: "destructive",
+      })
     }
   }
+
+  // Add this useEffect after the other useEffect hooks
+  useEffect(() => {
+    // Pre-initialize speech synthesis
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      // This forces the browser to load voices
+      window.speechSynthesis.getVoices()
+    }
+  }, [])
 
   const placeholderText =
     language === "en"
@@ -295,7 +344,7 @@ export default function Chatbot() {
                     ? "Mali Agent:"
                     : "مالی ایجنٹ:"}
               </p>
-              <p className="text-sm whitespace-pre-line">{cleanTextForDisplay(message.content)}</p>
+              <div className="text-sm chat-message">{cleanTextForDisplay(message.content)}</div>
             </div>
           ))}
           {isLoading && (
@@ -333,12 +382,16 @@ export default function Chatbot() {
                 const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant")
                 if (lastAssistantMessage) {
                   speakText(cleanTextForDisplay(lastAssistantMessage.content))
+                  toast({
+                    title: language === "en" ? "Speaking..." : "بول رہا ہے...",
+                    description: language === "en" ? "The message is being spoken." : "پیغام بولا جا رہا ہے۔",
+                  })
                 }
               }
             }}
             disabled={isLoading || isSpeaking}
             variant="outline"
-            className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-50" : ""}`}
+            className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
           >
             {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
             <span className="sr-only">{language === "en" ? "Text to speech" : "متن سے تقریر"}</span>

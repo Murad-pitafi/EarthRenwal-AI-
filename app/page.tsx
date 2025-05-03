@@ -8,6 +8,7 @@ import { ArrowRight, Leaf, Microscope, Award, ImageIcon, BarChart } from "lucide
 import { MediaGallerySlider } from "@/components/MediaGallerySlider"
 import { useUser } from "@/contexts/UserContext"
 import { CollaborationSection } from "@/components/CollaborationSection"
+import { DataCollectionSection } from "@/components/DataCollectionSection"
 
 export default function Home() {
   const { language } = useUser()
@@ -200,6 +201,8 @@ export default function Home() {
           </Button>
         </div>
       </section>
+
+      <DataCollectionSection />
 
       {/* Collaborations Section */}
       <section className="py-8 bg-gradient-to-b from-white to-green-50 rounded-xl">

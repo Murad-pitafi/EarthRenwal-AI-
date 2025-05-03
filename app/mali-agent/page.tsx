@@ -23,6 +23,8 @@ export default function MaliAgent() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
+  // Add a state variable for speech
+  const [isSpeaking, setIsSpeaking] = useState(false)
 
   const translations = {
     en: {
@@ -70,6 +72,66 @@ export default function MaliAgent() {
       .trim()
   }
 
+  // Add this function to format the text for display while preserving formatting
+  const formatResponseText = (text: string): string => {
+    // Replace markdown with proper formatting but preserve structure
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "$1") // Remove ** but keep the content bold
+      .trim()
+  }
+
+  // Add this function to handle text-to-speech
+  const speakText = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      console.error("Text-to-speech not supported")
+      return
+    }
+
+    try {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel()
+      setIsSpeaking(true)
+
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = language === "en" ? "en-US" : "ur-PK"
+      utterance.rate = 1.0
+      utterance.pitch = 1.0
+
+      // Try to find an appropriate voice
+      const voices = window.speechSynthesis.getVoices()
+      const languageVoices = voices.filter((voice) =>
+        language === "en" ? voice.lang.startsWith("en") : voice.lang.startsWith("ur"),
+      )
+
+      // Use a language-specific voice if available, otherwise use default
+      if (languageVoices.length > 0) {
+        utterance.voice = languageVoices[0]
+      }
+
+      // Set up event handlers
+      utterance.onend = () => {
+        setIsSpeaking(false)
+      }
+
+      utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event)
+        setIsSpeaking(false)
+      }
+
+      window.speechSynthesis.speak(utterance)
+
+      // Safety timeout in case onend doesn't fire
+      setTimeout(() => {
+        if (isSpeaking) {
+          setIsSpeaking(false)
+        }
+      }, 15000)
+    } catch (error) {
+      console.error("Error in text-to-speech:", error)
+      setIsSpeaking(false)
+    }
+  }
+
   useEffect(() => {
     // Set initial welcome message in the selected language
     const welcomeMessage =
@@ -84,6 +146,15 @@ export default function MaliAgent() {
       },
     ])
   }, [language])
+
+  // Add this useEffect to initialize speech synthesis
+  useEffect(() => {
+    // Pre-initialize speech synthesis
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      // This forces the browser to load voices
+      window.speechSynthesis.getVoices()
+    }
+  }, [])
 
   const handleVoiceInput = () => {
     // Check if browser supports speech recognition
@@ -157,6 +228,7 @@ export default function MaliAgent() {
     }
   }
 
+  // Update the handleSubmit function to include speech functionality
   const handleSubmit = async (e: React.FormEvent, voiceInput = "") => {
     e.preventDefault()
     const userMessage = voiceInput || input
@@ -168,11 +240,11 @@ export default function MaliAgent() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessageObj],
+          query: userMessage,
           language: language,
         }),
       })
@@ -183,7 +255,17 @@ export default function MaliAgent() {
 
       if (data.error) throw new Error(data.error)
 
-      setMessages((prev) => [...prev, { role: "assistant", content: data.text || "" }])
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: data.response || "",
+      }
+
+      setMessages((prev) => [...prev, assistantMessage])
+
+      // Automatically speak the response
+      if (data.response) {
+        speakText(formatResponseText(data.response))
+      }
     } catch (error) {
       console.error("Error:", error)
       // Fallback responses in case of API failure

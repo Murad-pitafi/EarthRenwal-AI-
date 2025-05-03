@@ -16,6 +16,7 @@ import {
   BarChart,
   Menu,
   ChevronDown,
+  Volume2,
 } from "lucide-react"
 import Image from "next/image"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -102,6 +103,11 @@ export function Navigation() {
       href: "/media-gallery",
       label: t.mediaGallery,
       icon: ImageIcon,
+    },
+    {
+      href: "/test-speech",
+      label: language === "en" ? "Test Speech" : "ٹیسٹ اسپیچ",
+      icon: Volume2,
     },
     {
       href: "/achievements",
