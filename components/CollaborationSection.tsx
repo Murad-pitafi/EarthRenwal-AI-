@@ -35,6 +35,27 @@ export function CollaborationSection() {
 
   const t = translations[language]
 
+  const partners = [
+    {
+      name: "ZettaMight",
+      logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-ZCURp5w8nKdOAA6URQplipESofd9lD.png",
+      description: {
+        en: "ZettaMight is a premier destination for cutting-edge solutions in Cloud and Cyber Security, Blockchain technology, AI innovation, and digital product development.",
+        ur: "زیٹامائٹ کلاؤڈ اور سائبر سیکیورٹی، بلاکچین ٹیکنالوجی، اے آئی جدت، اور ڈیجیٹل پروڈکٹ ڈویلپمنٹ میں جدید حل کے لیے ایک اعلی مقام ہے۔",
+      },
+      website: "https://zettamight.com",
+    },
+    {
+      name: "AgroTech Vision",
+      logo: "/placeholder.svg?key=xp9kk",
+      description: {
+        en: "AgroTech Vision provides cutting-edge agricultural technology solutions, incubated in NIC Hyderabad. Our partnership focuses on implementing precision farming techniques and IoT solutions for Pakistani farmers.",
+        ur: "ایگرو ٹیک ویژن جدید زرعی ٹیکنالوجی کے حل فراہم کرتا ہے، این آئی سی حیدرآباد میں انکیوبیٹڈ ہے۔ ہماری شراکت داری پاکستانی کسانوں کے لیے پریسیژن فارمنگ تکنیک اور آئی او ٹی حل کو نافذ کرنے پر مرکوز ہے۔",
+      },
+      website: "https://agrotechvision.com",
+    },
+  ]
+
   return (
     <section className="py-12 bg-gradient-to-b from-white to-green-50">
       <div className="container mx-auto px-4">

@@ -17,6 +17,7 @@ import {
   Menu,
   ChevronDown,
   Volume2,
+  Activity,
 } from "lucide-react"
 import Image from "next/image"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -85,6 +86,14 @@ export function Navigation() {
       href: "/contact",
       label: t.contact,
       icon: Phone,
+    },
+    {
+      href: "/real-time-monitoring",
+      label: {
+        en: "Real-time Monitoring",
+        ur: "ریئل ٹائم مانیٹرنگ",
+      }[language],
+      icon: Activity,
     },
   ]
 

@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
 type Language = "en" | "ur"
 
@@ -13,16 +11,22 @@ interface UserContextType {
   setLanguage: (lang: Language) => void
 }
 
-const UserContext = createContext<UserContextType | undefined>(undefined)
+// Create context with default values
+const UserContext = createContext<UserContextType>({
+  username: "",
+  setUsername: () => {},
+  language: "en",
+  setLanguage: () => {},
+})
 
-export function UserProvider({ children }: { children: React.ReactNode }) {
+export function UserProvider({ children }: { children: ReactNode }) {
   const [username, setUsername] = useState<string>("")
   const [language, setLanguage] = useState<Language>("en")
-  const [isClient, setIsClient] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  // Mark when component is mounted on client
+  // Only run on client side
   useEffect(() => {
-    setIsClient(true)
+    setMounted(true)
 
     // Initialize from localStorage on mount
     if (typeof window !== "undefined") {
@@ -41,31 +45,25 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Update localStorage when values change
   useEffect(() => {
-    if (typeof window !== "undefined" && isClient) {
+    if (mounted && typeof window !== "undefined") {
       localStorage.setItem("username", username)
       localStorage.setItem("language", language)
-      console.log("Language updated in localStorage:", language)
     }
-  }, [username, language, isClient])
+  }, [username, language, mounted])
 
-  return (
-    <UserContext.Provider
-      value={{
-        username,
-        setUsername,
-        language,
-        setLanguage,
-      }}
-    >
-      {children}
-    </UserContext.Provider>
-  )
+  // Provide a stable context value
+  const value = {
+    username,
+    setUsername,
+    language,
+    setLanguage,
+  }
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>
 }
 
+// Custom hook to use the context
 export function useUser() {
   const context = useContext(UserContext)
-  if (context === undefined) {
-    throw new Error("useUser must be used within a UserProvider")
-  }
   return context
 }

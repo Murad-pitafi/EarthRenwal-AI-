@@ -366,7 +366,7 @@ export default function RiceStatistics() {
               <CardDescription>{t.soilHealthDesc}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <div>
                   <ul className="space-y-3">
                     {t.soilHealthPoints.map((point, index) => (
@@ -430,14 +430,6 @@ export default function RiceStatistics() {
                     </div>
                   </div>
                 </div>
-                <div className="relative h-64 rounded-lg overflow-hidden">
-                  <Image
-                    src="/placeholder.svg?height=300&width=500&query=soil nutrient cycle diagram showing NPK flow in rice fields"
-                    alt="Soil nutrient cycle"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -475,15 +467,6 @@ export default function RiceStatistics() {
                       <p>{t.knowledgeDesc}</p>
                     </CardContent>
                   </Card>
-                </div>
-
-                <div className="relative h-64 rounded-lg overflow-hidden">
-                  <Image
-                    src="/placeholder.svg?height=300&width=500&query=challenges in rice farming infographic showing technology gap, input quality issues, and knowledge barriers"
-                    alt="Challenges in rice farming"
-                    fill
-                    className="object-cover"
-                  />
                 </div>
 
                 <div>
