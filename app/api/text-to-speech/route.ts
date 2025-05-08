@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server"
-import { readFile } from "fs/promises"
 import { exec } from "child_process"
 import { promisify } from "util"
 import path from "path"
+import fs from "fs"
+import os from "os"
 
 const execAsync = promisify(exec)
+
+// Ensure temp directory exists
+const getTempFilePath = () => {
+  const tempDir = path.join(os.tmpdir(), "earth-renewal-tts")
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true })
+  }
+  return path.join(tempDir, `speech_${Date.now()}.mp3`)
+}
 
 export async function POST(req: Request) {
   try {
@@ -14,17 +24,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Text and language are required" }, { status: 400 })
     }
 
-    const filename = `speech_${Date.now()}.mp3`
-    const filepath = path.join(process.cwd(), "tmp", filename)
+    // Limit text length for quicker processing
+    const limitedText = text.length > 500 ? text.substring(0, 500) + "..." : text
 
-    await execAsync(`gtts-cli "${text}" --lang ${language} --output ${filepath}`)
+    const filepath = getTempFilePath()
+    const langCode = language === "ur" ? "ur" : "en"
 
-    const audioBuffer = await readFile(filepath)
+    // Use gTTS for better language support
+    await execAsync(`gtts-cli "${limitedText.replace(/"/g, '\\"')}" --lang ${langCode} --output ${filepath}`)
+
+    // Read the file and return it
+    const audioBuffer = fs.readFileSync(filepath)
+
+    // Clean up the file
+    fs.unlinkSync(filepath)
 
     return new NextResponse(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `attachment; filename="speech.mp3"`,
       },
     })
   } catch (error) {

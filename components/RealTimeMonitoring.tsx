@@ -40,7 +40,7 @@ export function RealTimeMonitoring() {
   const [hiddenSensors, setHiddenSensors] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<"cards" | "charts" | "gauges">("cards")
   const [selectedSensor, setSelectedSensor] = useState<string | null>(null)
-  const [useMockData, setUseMockData] = useState(false) // New state for toggling mock data
+  const [useMockData, setUseMockData] = useState(true) // Changed from false to true to enable mock data by default
 
   // Translations
   const translations = {
