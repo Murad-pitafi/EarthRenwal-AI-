@@ -65,8 +65,7 @@
     "path": "latest",
     "@google/generative-ai": "latest",
     "react-chartjs-2": "latest",
-    "uuid": "latest",
-    "os": "latest"
+    "uuid": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

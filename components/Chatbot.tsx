@@ -95,6 +95,7 @@ export default function Chatbot() {
           messages: [...messages, newUserMessage],
           language: language,
           sessionId: sessionId,
+          maxLength: 4, // Request short responses (3-4 lines)
         }),
       })
 
@@ -211,80 +212,108 @@ export default function Chatbot() {
     }
   }
 
-  const speakText = async (text: string) => {
+  // Updated speech function to use browser TTS directly
+  const speakText = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast({
+        title: language === "en" ? "Not Supported" : "سپورٹ نہیں ہے",
+        description:
+          language === "en"
+            ? "Your browser does not support text-to-speech."
+            : "آپ کا براؤزر ٹیکسٹ ٹو سپیچ کو سپورٹ نہیں کرتا۔",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel()
       setIsSpeaking(true)
 
-      // Use server-side TTS for better language support
-      const response = await fetch("/api/text-to-speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, language }),
-      })
+      const utterance = new SpeechSynthesisUtterance(text)
 
-      if (!response.ok) throw new Error("TTS request failed")
+      // Set language based on current app language
+      utterance.lang = language === "en" ? "en-US" : "ur-PK"
 
-      const audioBlob = await response.blob()
-      const audioUrl = URL.createObjectURL(audioBlob)
-      const audio = new Audio(audioUrl)
+      // Get available voices
+      let voices = window.speechSynthesis.getVoices()
 
-      audio.onended = () => {
-        setIsSpeaking(false)
-        URL.revokeObjectURL(audioUrl) // Clean up
+      // If voices array is empty, try to load voices
+      if (voices.length === 0) {
+        // Force voice loading and wait a bit
+        window.speechSynthesis.getVoices()
+
+        // Set a timeout to try again after voices might have loaded
+        setTimeout(() => {
+          voices = window.speechSynthesis.getVoices()
+          if (voices.length > 0) {
+            // Find appropriate voice
+            const languageVoices = voices.filter((voice) =>
+              language === "en"
+                ? voice.lang.startsWith("en")
+                : voice.lang.includes("ur") || voice.lang.includes("hi") || voice.lang.includes("ar"),
+            )
+
+            if (languageVoices.length > 0) {
+              utterance.voice = languageVoices[0]
+            }
+
+            // Speak with the selected or default voice
+            window.speechSynthesis.speak(utterance)
+          }
+        }, 100)
+      } else {
+        // Find appropriate voice
+        const languageVoices = voices.filter((voice) =>
+          language === "en"
+            ? voice.lang.startsWith("en")
+            : voice.lang.includes("ur") || voice.lang.includes("hi") || voice.lang.includes("ar"),
+        )
+
+        if (languageVoices.length > 0) {
+          utterance.voice = languageVoices[0]
+        }
       }
 
-      audio.onerror = () => {
-        console.error("Audio playback error")
+      // Set up event handlers
+      utterance.onend = () => {
         setIsSpeaking(false)
-        URL.revokeObjectURL(audioUrl)
       }
 
-      await audio.play()
+      utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event)
+        setIsSpeaking(false)
+        toast({
+          title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
+          description:
+            language === "en"
+              ? "An error occurred during speech synthesis."
+              : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+          variant: "destructive",
+        })
+      }
+
+      // Speak
+      window.speechSynthesis.speak(utterance)
+
+      // Safety timeout in case onend doesn't fire
+      setTimeout(() => {
+        if (isSpeaking) {
+          setIsSpeaking(false)
+        }
+      }, 15000)
     } catch (error) {
-      console.error("Speech error:", error)
+      console.error("Error in text-to-speech:", error)
       setIsSpeaking(false)
       toast({
         title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
         description:
           language === "en"
-            ? "Could not play speech. Trying browser fallback..."
-            : "تقریر نہیں چل سکی۔ براؤزر فالبیک کی کوشش کر رہا ہے...",
+            ? "An error occurred during speech synthesis."
+            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+        variant: "destructive",
       })
-
-      // Fallback to browser TTS
-      tryBrowserTTS(text)
-    }
-  }
-
-  // Add this new function for browser fallback
-  const tryBrowserTTS = (text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      return
-    }
-
-    try {
-      window.speechSynthesis.cancel()
-
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = language === "en" ? "en-US" : "ur-PK"
-
-      // Get available voices
-      const voices = window.speechSynthesis.getVoices()
-      const languageVoices = voices.filter((voice) =>
-        language === "en" ? voice.lang.startsWith("en") : voice.lang.startsWith("ur"),
-      )
-
-      if (languageVoices.length > 0) {
-        utterance.voice = languageVoices[0]
-      }
-
-      utterance.onend = () => setIsSpeaking(false)
-      utterance.onerror = () => setIsSpeaking(false)
-
-      window.speechSynthesis.speak(utterance)
-    } catch (error) {
-      console.error("Browser TTS error:", error)
-      setIsSpeaking(false)
     }
   }
 

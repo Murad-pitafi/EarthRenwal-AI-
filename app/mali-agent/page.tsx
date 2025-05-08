@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Mic, Send } from "lucide-react"
+import { Loader2, Mic, Send, Volume2 } from "lucide-react"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
 import { toast } from "@/components/ui/use-toast"
@@ -23,7 +23,6 @@ export default function MaliAgent() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
-  // Add a state variable for speech
   const [isSpeaking, setIsSpeaking] = useState(false)
 
   const translations = {
@@ -80,42 +79,106 @@ export default function MaliAgent() {
       .trim()
   }
 
-  // Add this function to handle text-to-speech
-  const speakText = async (text: string) => {
+  // Updated speech function to use browser TTS directly
+  const speakText = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast({
+        title: language === "en" ? "Not Supported" : "سپورٹ نہیں ہے",
+        description:
+          language === "en"
+            ? "Your browser does not support text-to-speech."
+            : "آپ کا براؤزر ٹیکسٹ ٹو سپیچ کو سپورٹ نہیں کرتا۔",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel()
       setIsSpeaking(true)
 
-      // Use server-side TTS for better language support
-      const response = await fetch("/api/text-to-speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, language }),
-      })
+      const utterance = new SpeechSynthesisUtterance(text)
 
-      if (!response.ok) throw new Error("TTS request failed")
+      // Set language based on current app language
+      utterance.lang = language === "en" ? "en-US" : "ur-PK"
 
-      const audioBlob = await response.blob()
-      const audioUrl = URL.createObjectURL(audioBlob)
-      const audio = new Audio(audioUrl)
+      // Get available voices
+      let voices = window.speechSynthesis.getVoices()
 
-      audio.onended = () => {
-        setIsSpeaking(false)
-        URL.revokeObjectURL(audioUrl) // Clean up
+      // If voices array is empty, try to load voices
+      if (voices.length === 0) {
+        // Force voice loading and wait a bit
+        window.speechSynthesis.getVoices()
+
+        // Set a timeout to try again after voices might have loaded
+        setTimeout(() => {
+          voices = window.speechSynthesis.getVoices()
+          if (voices.length > 0) {
+            // Find appropriate voice
+            const languageVoices = voices.filter((voice) =>
+              language === "en"
+                ? voice.lang.startsWith("en")
+                : voice.lang.includes("ur") || voice.lang.includes("hi") || voice.lang.includes("ar"),
+            )
+
+            if (languageVoices.length > 0) {
+              utterance.voice = languageVoices[0]
+            }
+
+            // Speak with the selected or default voice
+            window.speechSynthesis.speak(utterance)
+          }
+        }, 100)
+      } else {
+        // Find appropriate voice
+        const languageVoices = voices.filter((voice) =>
+          language === "en"
+            ? voice.lang.startsWith("en")
+            : voice.lang.includes("ur") || voice.lang.includes("hi") || voice.lang.includes("ar"),
+        )
+
+        if (languageVoices.length > 0) {
+          utterance.voice = languageVoices[0]
+        }
       }
 
-      audio.onerror = () => {
-        console.error("Audio playback error")
+      // Set up event handlers
+      utterance.onend = () => {
         setIsSpeaking(false)
-        URL.revokeObjectURL(audioUrl)
       }
 
-      await audio.play()
+      utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event)
+        setIsSpeaking(false)
+        toast({
+          title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
+          description:
+            language === "en"
+              ? "An error occurred during speech synthesis."
+              : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+          variant: "destructive",
+        })
+      }
+
+      // Speak
+      window.speechSynthesis.speak(utterance)
+
+      // Safety timeout in case onend doesn't fire
+      setTimeout(() => {
+        if (isSpeaking) {
+          setIsSpeaking(false)
+        }
+      }, 15000)
     } catch (error) {
-      console.error("Speech error:", error)
+      console.error("Error in text-to-speech:", error)
       setIsSpeaking(false)
       toast({
         title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
-        description: language === "en" ? "Could not play speech" : "تقریر نہیں چل سکی",
+        description:
+          language === "en"
+            ? "An error occurred during speech synthesis."
+            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
         variant: "destructive",
       })
     }
@@ -235,6 +298,7 @@ export default function MaliAgent() {
         body: JSON.stringify({
           query: userMessage,
           language: language,
+          maxLength: 4, // Request short responses (3-4 lines)
         }),
       })
 
@@ -343,6 +407,27 @@ export default function MaliAgent() {
               >
                 {isRecording ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                 <span className="sr-only">{t.voice}</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (messages.length > 0) {
+                    const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant")
+                    if (lastAssistantMessage) {
+                      speakText(cleanTextForDisplay(lastAssistantMessage.content))
+                      toast({
+                        title: language === "en" ? "Speaking..." : "بول رہا ہے...",
+                        description: language === "en" ? "The message is being spoken." : "پیغام بولا جا رہا ہے۔",
+                      })
+                    }
+                  }
+                }}
+                disabled={isLoading || isSpeaking}
+                variant="outline"
+                className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
+              >
+                {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+                <span className="sr-only">{language === "en" ? "Text to speech" : "متن سے تقریر"}</span>
               </Button>
             </form>
           </CardContent>
