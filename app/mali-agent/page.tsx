@@ -24,6 +24,7 @@ export default function MaliAgent() {
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
 
   const translations = {
     en: {
@@ -79,7 +80,77 @@ export default function MaliAgent() {
       .trim()
   }
 
-  // Updated speech function to use browser TTS directly
+  // Load and cache available voices
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return
+    }
+
+    // Function to update available voices
+    const updateVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      setAvailableVoices(voices)
+      console.log(
+        "Available voices:",
+        voices.map((v) => `${v.name} (${v.lang})`),
+      )
+    }
+
+    // Get initial voices
+    updateVoices()
+
+    // Set up event listener for when voices change
+    window.speechSynthesis.onvoiceschanged = updateVoices
+
+    // Clean up
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null
+      }
+    }
+  }, [])
+
+  // Find the best voice for the current language
+  const getBestVoiceForLanguage = (lang: string): SpeechSynthesisVoice | null => {
+    if (!availableVoices.length) {
+      return null
+    }
+
+    // For Urdu, try to find Urdu voice first, then Hindi, then Arabic as fallbacks
+    if (lang === "ur") {
+      // Try Urdu first
+      const urduVoice = availableVoices.find(
+        (voice) => voice.lang.toLowerCase().includes("ur") || voice.name.toLowerCase().includes("urdu"),
+      )
+      if (urduVoice) return urduVoice
+
+      // Try Hindi as fallback
+      const hindiVoice = availableVoices.find(
+        (voice) => voice.lang.toLowerCase().includes("hi") || voice.name.toLowerCase().includes("hindi"),
+      )
+      if (hindiVoice) return hindiVoice
+
+      // Try Arabic as fallback
+      const arabicVoice = availableVoices.find(
+        (voice) => voice.lang.toLowerCase().includes("ar") || voice.name.toLowerCase().includes("arab"),
+      )
+      if (arabicVoice) return arabicVoice
+
+      // If no appropriate voice found, use any voice
+      return availableVoices[0]
+    }
+
+    // For English
+    if (lang === "en") {
+      const englishVoice = availableVoices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
+      return englishVoice || availableVoices[0]
+    }
+
+    // Default fallback
+    return availableVoices[0]
+  }
+
+  // Updated speech function with improved voice selection
   const speakText = (text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       toast({
@@ -103,48 +174,19 @@ export default function MaliAgent() {
       // Set language based on current app language
       utterance.lang = language === "en" ? "en-US" : "ur-PK"
 
-      // Get available voices
-      let voices = window.speechSynthesis.getVoices()
+      // Get the best voice for the current language
+      const voice = getBestVoiceForLanguage(language)
 
-      // If voices array is empty, try to load voices
-      if (voices.length === 0) {
-        // Force voice loading and wait a bit
-        window.speechSynthesis.getVoices()
-
-        // Set a timeout to try again after voices might have loaded
-        setTimeout(() => {
-          voices = window.speechSynthesis.getVoices()
-          if (voices.length > 0) {
-            // Find appropriate voice
-            const languageVoices = voices.filter((voice) =>
-              language === "en"
-                ? voice.lang.startsWith("en")
-                : voice.lang.includes("ur") || voice.lang.includes("hi") || voice.lang.includes("ar"),
-            )
-
-            if (languageVoices.length > 0) {
-              utterance.voice = languageVoices[0]
-            }
-
-            // Speak with the selected or default voice
-            window.speechSynthesis.speak(utterance)
-          }
-        }, 100)
+      if (voice) {
+        console.log(`Using voice: ${voice.name} (${voice.lang}) for ${language}`)
+        utterance.voice = voice
       } else {
-        // Find appropriate voice
-        const languageVoices = voices.filter((voice) =>
-          language === "en"
-            ? voice.lang.startsWith("en")
-            : voice.lang.includes("ur") || voice.lang.includes("hi") || voice.lang.includes("ar"),
-        )
-
-        if (languageVoices.length > 0) {
-          utterance.voice = languageVoices[0]
-        }
+        console.log(`No appropriate voice found for ${language}. Using default.`)
       }
 
       // Set up event handlers
       utterance.onend = () => {
+        console.log("Speech ended")
         setIsSpeaking(false)
       }
 
@@ -163,10 +205,12 @@ export default function MaliAgent() {
 
       // Speak
       window.speechSynthesis.speak(utterance)
+      console.log("Started speaking:", text.substring(0, 50) + "...")
 
       // Safety timeout in case onend doesn't fire
       setTimeout(() => {
         if (isSpeaking) {
+          console.log("Safety timeout triggered - resetting speaking state")
           setIsSpeaking(false)
         }
       }, 15000)
@@ -198,15 +242,6 @@ export default function MaliAgent() {
       },
     ])
   }, [language])
-
-  // Add this useEffect to initialize speech synthesis
-  useEffect(() => {
-    // Pre-initialize speech synthesis
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      // This forces the browser to load voices
-      window.speechSynthesis.getVoices()
-    }
-  }, [])
 
   const handleVoiceInput = () => {
     // Check if browser supports speech recognition
