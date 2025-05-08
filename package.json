@@ -31,7 +31,7 @@
     "@radix-ui/react-separator": "1.1.1",
     "@radix-ui/react-slider": "1.2.2",
     "@radix-ui/react-slot": "latest",
-    "@radix-ui/react-switch": "1.1.2",
+    "@radix-ui/react-switch": "latest",
     "@radix-ui/react-tabs": "latest",
     "@radix-ui/react-toast": "latest",
     "@radix-ui/react-toggle": "1.1.1",
@@ -58,12 +58,14 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
+    "chart.js": "latest",
     "fs": "latest",
     "child_process": "latest",
     "util": "latest",
     "path": "latest",
     "@google/generative-ai": "latest",
-    "uuid": "latest"
+    "uuid": "latest",
+    "react-chartjs-2": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
