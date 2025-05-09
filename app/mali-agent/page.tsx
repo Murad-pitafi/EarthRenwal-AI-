@@ -25,6 +25,7 @@ export default function MaliAgent() {
   const [isRecording, setIsRecording] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [voicesLoaded, setVoicesLoaded] = useState(false)
 
   const translations = {
     en: {
@@ -90,6 +91,7 @@ export default function MaliAgent() {
     const updateVoices = () => {
       const voices = window.speechSynthesis.getVoices()
       setAvailableVoices(voices)
+      setVoicesLoaded(true)
       console.log(
         "Available voices:",
         voices.map((v) => `${v.name} (${v.lang})`),
@@ -97,7 +99,10 @@ export default function MaliAgent() {
     }
 
     // Get initial voices
-    updateVoices()
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      updateVoices()
+    }
 
     // Set up event listener for when voices change
     window.speechSynthesis.onvoiceschanged = updateVoices
@@ -122,45 +127,59 @@ export default function MaliAgent() {
       const urduVoice = availableVoices.find(
         (voice) => voice.lang.toLowerCase().includes("ur") || voice.name.toLowerCase().includes("urdu"),
       )
-      if (urduVoice) return urduVoice
+      if (urduVoice) {
+        console.log("Found Urdu voice:", urduVoice.name)
+        return urduVoice
+      }
 
       // Try Hindi as fallback
       const hindiVoice = availableVoices.find(
         (voice) => voice.lang.toLowerCase().includes("hi") || voice.name.toLowerCase().includes("hindi"),
       )
-      if (hindiVoice) return hindiVoice
+      if (hindiVoice) {
+        console.log("Using Hindi voice as fallback:", hindiVoice.name)
+        return hindiVoice
+      }
 
       // Try Arabic as fallback
       const arabicVoice = availableVoices.find(
         (voice) => voice.lang.toLowerCase().includes("ar") || voice.name.toLowerCase().includes("arab"),
       )
-      if (arabicVoice) return arabicVoice
+      if (arabicVoice) {
+        console.log("Using Arabic voice as fallback:", arabicVoice.name)
+        return arabicVoice
+      }
+
+      // Try any female voice as fallback (often better for Urdu)
+      const femaleVoice = availableVoices.find((voice) => voice.name.toLowerCase().includes("female"))
+      if (femaleVoice) {
+        console.log("Using female voice as fallback:", femaleVoice.name)
+        return femaleVoice
+      }
 
       // If no appropriate voice found, use any voice
+      console.log("No appropriate voice found for Urdu, using default")
       return availableVoices[0]
     }
 
     // For English
     if (lang === "en") {
       const englishVoice = availableVoices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
-      return englishVoice || availableVoices[0]
+      if (englishVoice) {
+        console.log("Found English voice:", englishVoice.name)
+        return englishVoice
+      }
+      console.log("No English voice found, using default")
+      return availableVoices[0]
     }
 
     // Default fallback
     return availableVoices[0]
   }
 
-  // Updated speech function with improved voice selection
+  // Improved browser TTS function with better error handling
   const speakText = (text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      toast({
-        title: language === "en" ? "Not Supported" : "سپورٹ نہیں ہے",
-        description:
-          language === "en"
-            ? "Your browser does not support text-to-speech."
-            : "آپ کا براؤزر ٹیکسٹ ٹو سپیچ کو سپورٹ نہیں کرتا۔",
-        variant: "destructive",
-      })
+    if (!text.trim() || typeof window === "undefined" || !("speechSynthesis" in window)) {
       return
     }
 
@@ -208,14 +227,17 @@ export default function MaliAgent() {
       console.log("Started speaking:", text.substring(0, 50) + "...")
 
       // Safety timeout in case onend doesn't fire
-      setTimeout(() => {
-        if (isSpeaking) {
-          console.log("Safety timeout triggered - resetting speaking state")
-          setIsSpeaking(false)
-        }
-      }, 15000)
+      setTimeout(
+        () => {
+          if (isSpeaking) {
+            console.log("Safety timeout triggered - resetting speaking state")
+            setIsSpeaking(false)
+          }
+        },
+        Math.max(15000, text.length * 100),
+      ) // Longer timeout for longer text
     } catch (error) {
-      console.error("Error in text-to-speech:", error)
+      console.error("Browser TTS error:", error)
       setIsSpeaking(false)
       toast({
         title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
@@ -457,7 +479,7 @@ export default function MaliAgent() {
                     }
                   }
                 }}
-                disabled={isLoading || isSpeaking}
+                disabled={isLoading || isSpeaking || !voicesLoaded}
                 variant="outline"
                 className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
               >

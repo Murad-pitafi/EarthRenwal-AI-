@@ -28,6 +28,8 @@ export default function Chatbot() {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [sessionId, setSessionId] = useState<string>("")
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [voicesLoaded, setVoicesLoaded] = useState(false)
+  const [speechError, setSpeechError] = useState<string | null>(null)
 
   // Clean text for display - remove markdown and HTML tags
   const cleanTextForDisplay = (text: string): string => {
@@ -88,6 +90,7 @@ export default function Chatbot() {
     const updateVoices = () => {
       const voices = window.speechSynthesis.getVoices()
       setAvailableVoices(voices)
+      setVoicesLoaded(true)
       console.log(
         "Available voices:",
         voices.map((v) => `${v.name} (${v.lang})`),
@@ -95,7 +98,10 @@ export default function Chatbot() {
     }
 
     // Get initial voices
-    updateVoices()
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      updateVoices()
+    }
 
     // Set up event listener for when voices change
     window.speechSynthesis.onvoiceschanged = updateVoices
@@ -120,32 +126,136 @@ export default function Chatbot() {
       const urduVoice = availableVoices.find(
         (voice) => voice.lang.toLowerCase().includes("ur") || voice.name.toLowerCase().includes("urdu"),
       )
-      if (urduVoice) return urduVoice
+      if (urduVoice) {
+        console.log("Found Urdu voice:", urduVoice.name)
+        return urduVoice
+      }
 
       // Try Hindi as fallback
       const hindiVoice = availableVoices.find(
         (voice) => voice.lang.toLowerCase().includes("hi") || voice.name.toLowerCase().includes("hindi"),
       )
-      if (hindiVoice) return hindiVoice
+      if (hindiVoice) {
+        console.log("Using Hindi voice as fallback:", hindiVoice.name)
+        return hindiVoice
+      }
 
       // Try Arabic as fallback
       const arabicVoice = availableVoices.find(
         (voice) => voice.lang.toLowerCase().includes("ar") || voice.name.toLowerCase().includes("arab"),
       )
-      if (arabicVoice) return arabicVoice
+      if (arabicVoice) {
+        console.log("Using Arabic voice as fallback:", arabicVoice.name)
+        return arabicVoice
+      }
+
+      // Try any female voice as fallback (often better for Urdu)
+      const femaleVoice = availableVoices.find((voice) => voice.name.toLowerCase().includes("female"))
+      if (femaleVoice) {
+        console.log("Using female voice as fallback:", femaleVoice.name)
+        return femaleVoice
+      }
 
       // If no appropriate voice found, use any voice
+      console.log("No appropriate voice found for Urdu, using default")
       return availableVoices[0]
     }
 
     // For English
     if (lang === "en") {
       const englishVoice = availableVoices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
-      return englishVoice || availableVoices[0]
+      if (englishVoice) {
+        console.log("Found English voice:", englishVoice.name)
+        return englishVoice
+      }
+      console.log("No English voice found, using default")
+      return availableVoices[0]
     }
 
     // Default fallback
     return availableVoices[0]
+  }
+
+  // Improved browser TTS function with better error handling
+  const speakText = (text: string) => {
+    if (!text.trim() || typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return
+    }
+
+    try {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel()
+      setIsSpeaking(true)
+      setSpeechError(null)
+
+      const utterance = new SpeechSynthesisUtterance(text)
+
+      // Set language based on current app language
+      utterance.lang = language === "en" ? "en-US" : "ur-PK"
+
+      // Get the best voice for the current language
+      const voice = getBestVoiceForLanguage(language)
+
+      if (voice) {
+        console.log(`Using voice: ${voice.name} (${voice.lang}) for ${language}`)
+        utterance.voice = voice
+      } else {
+        console.log(`No appropriate voice found for ${language}. Using default.`)
+      }
+
+      // Set up event handlers
+      utterance.onend = () => {
+        console.log("Speech ended")
+        setIsSpeaking(false)
+      }
+
+      utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event)
+        setIsSpeaking(false)
+        setSpeechError(
+          language === "en"
+            ? "An error occurred during speech synthesis."
+            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+        )
+        toast({
+          title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
+          description:
+            language === "en"
+              ? "An error occurred during speech synthesis."
+              : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+          variant: "destructive",
+        })
+      }
+
+      // Speak
+      window.speechSynthesis.speak(utterance)
+      console.log("Started speaking:", text.substring(0, 50) + "...")
+
+      // Safety timeout in case onend doesn't fire
+      setTimeout(
+        () => {
+          if (isSpeaking) {
+            console.log("Safety timeout triggered - resetting speaking state")
+            setIsSpeaking(false)
+          }
+        },
+        Math.max(15000, text.length * 100),
+      ) // Longer timeout for longer text
+    } catch (error) {
+      console.error("Browser TTS error:", error)
+      setIsSpeaking(false)
+      setSpeechError(
+        language === "en" ? "An error occurred during speech synthesis." : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+      )
+      toast({
+        title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
+        description:
+          language === "en"
+            ? "An error occurred during speech synthesis."
+            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent, voiceInput = "") => {
@@ -283,93 +393,6 @@ export default function Chatbot() {
     }
   }
 
-  // Updated speech function with improved voice selection
-  const speakText = (text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      toast({
-        title: language === "en" ? "Not Supported" : "سپورٹ نہیں ہے",
-        description:
-          language === "en"
-            ? "Your browser does not support text-to-speech."
-            : "آپ کا براؤزر ٹیکسٹ ٹو سپیچ کو سپورٹ نہیں کرتا۔",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel()
-      setIsSpeaking(true)
-
-      const utterance = new SpeechSynthesisUtterance(text)
-
-      // Set language based on current app language
-      utterance.lang = language === "en" ? "en-US" : "ur-PK"
-
-      // Get the best voice for the current language
-      const voice = getBestVoiceForLanguage(language)
-
-      if (voice) {
-        console.log(`Using voice: ${voice.name} (${voice.lang}) for ${language}`)
-        utterance.voice = voice
-      } else {
-        console.log(`No appropriate voice found for ${language}. Using default.`)
-      }
-
-      // Set up event handlers
-      utterance.onend = () => {
-        console.log("Speech ended")
-        setIsSpeaking(false)
-      }
-
-      utterance.onerror = (event) => {
-        console.error("Speech synthesis error:", event)
-        setIsSpeaking(false)
-        toast({
-          title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
-          description:
-            language === "en"
-              ? "An error occurred during speech synthesis."
-              : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-          variant: "destructive",
-        })
-      }
-
-      // Speak
-      window.speechSynthesis.speak(utterance)
-      console.log("Started speaking:", text.substring(0, 50) + "...")
-
-      // Safety timeout in case onend doesn't fire
-      setTimeout(() => {
-        if (isSpeaking) {
-          console.log("Safety timeout triggered - resetting speaking state")
-          setIsSpeaking(false)
-        }
-      }, 15000)
-    } catch (error) {
-      console.error("Error in text-to-speech:", error)
-      setIsSpeaking(false)
-      toast({
-        title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
-        description:
-          language === "en"
-            ? "An error occurred during speech synthesis."
-            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Add this useEffect after the other useEffect hooks
-  useEffect(() => {
-    // Pre-initialize speech synthesis
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      // This forces the browser to load voices
-      window.speechSynthesis.getVoices()
-    }
-  }, [])
-
   const placeholderText =
     language === "en"
       ? "Ask about crops, soil, weather, or farming practices..."
@@ -461,7 +484,7 @@ export default function Chatbot() {
                 }
               }
             }}
-            disabled={isLoading || isSpeaking}
+            disabled={isLoading || isSpeaking || !voicesLoaded || !!speechError}
             variant="outline"
             className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
           >

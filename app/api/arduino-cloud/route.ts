@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 
+// Arduino Cloud API - READ ONLY
+// This API route only reads data from Arduino Cloud and does not modify any values
+
 // Arduino Cloud API credentials
 const ARDUINO_CLIENT_ID = "BjGXXFbFVNCtGzUDDSjnVxwyDwEcVgzo"
 const ARDUINO_CLIENT_SECRET = "b4PDlSf8Xl9oUJa6YiicneBDOrBcGaEtGxETyLxgjaJGg0cG4o2mxm3z6Au4y2EI"
@@ -276,17 +279,8 @@ export async function GET() {
   try {
     console.log("Arduino Cloud API route called")
 
-    // For testing purposes, return mock data if API fails
-    const useMockData = false
-
-    if (useMockData) {
-      console.log("Using mock data for testing")
-      return NextResponse.json({
-        success: true,
-        data: generateDemoData(),
-        isDemo: true,
-      })
-    }
+    // Always attempt to fetch real data from Arduino Cloud
+    console.log("Attempting to fetch real data from Arduino Cloud")
 
     try {
       // Get Arduino Cloud access token
@@ -304,7 +298,7 @@ export async function GET() {
           success: true,
           data: generateDemoData(),
           isDemo: true,
-          error: "Could not list properties",
+          error: "Could not read properties",
         })
       }
 

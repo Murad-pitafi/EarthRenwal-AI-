@@ -8,10 +8,8 @@ import { SensorInsights } from "./SensorInsights"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useUser } from "@/contexts/UserContext"
-import { RefreshCw, AlertTriangle, LayoutDashboard, LineChart, Gauge, Database } from "lucide-react"
+import { RefreshCw, AlertTriangle, LayoutDashboard, LineChart, Gauge } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 
 interface SensorData {
   id: string
@@ -40,7 +38,6 @@ export function RealTimeMonitoring() {
   const [hiddenSensors, setHiddenSensors] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<"cards" | "charts" | "gauges">("cards")
   const [selectedSensor, setSelectedSensor] = useState<string | null>(null)
-  const [useMockData, setUseMockData] = useState(true) // Changed from false to true to enable mock data by default
 
   // Translations
   const translations = {
@@ -69,9 +66,6 @@ export function RealTimeMonitoring() {
       gaugeView: "Gauge View",
       insights: "Insights",
       history: "History",
-      useMockData: "Use Mock Data",
-      usingMockData: "Using mock data",
-      usingApiData: "Using API data",
     },
     ur: {
       title: "حقیقی وقت کی نگرانی",
@@ -98,86 +92,10 @@ export function RealTimeMonitoring() {
       gaugeView: "گیج ویو",
       insights: "انسائٹس",
       history: "تاریخ",
-      useMockData: "نقلی ڈیٹا استعمال کریں",
-      usingMockData: "نقلی ڈیٹا استعمال کر رہے ہیں",
-      usingApiData: "API ڈیٹا استعمال کر رہے ہیں",
     },
   }
 
   const t = translations[language]
-
-  // Generate mock sensor data
-  const generateMockData = (): SensorData[] => {
-    const now = new Date().toISOString()
-
-    return [
-      {
-        id: "temp-1",
-        variableId: "temp",
-        name: "Temperature",
-        value: 31 + (Math.random() * 6 - 3), // 28-34
-        unit: "°C",
-        timestamp: now,
-        type: "environment",
-        icon: "thermometer",
-        description: "Ambient temperature",
-        min: 0,
-        max: 50,
-      },
-      {
-        id: "humd-1",
-        variableId: "humd",
-        name: "Humidity",
-        value: 71 + (Math.random() * 10 - 5), // 66-76
-        unit: "%",
-        timestamp: now,
-        type: "environment",
-        icon: "droplet",
-        description: "Air humidity",
-        min: 0,
-        max: 100,
-      },
-      {
-        id: "gas-1",
-        variableId: "gas",
-        name: "Gas Level",
-        value: 770 + (Math.random() * 100 - 50), // 720-820
-        unit: "ppm",
-        timestamp: now,
-        type: "environment",
-        icon: "wind",
-        description: "Gas concentration",
-        min: 0,
-        max: 1000,
-      },
-      {
-        id: "dist-1",
-        variableId: "dist",
-        name: "Distance",
-        value: 65 + (Math.random() * 10 - 5), // 60-70
-        unit: "cm",
-        timestamp: now,
-        type: "environment",
-        icon: "ruler",
-        description: "Distance measurement",
-        min: 0,
-        max: 200,
-      },
-      {
-        id: "nit-1",
-        variableId: "nit",
-        name: "Nitrogen",
-        value: 15 + (Math.random() * 10 - 5), // 10-20
-        unit: "ppm",
-        timestamp: now,
-        type: "soil",
-        icon: "leaf",
-        description: "Nitrogen level in soil",
-        min: 0,
-        max: 100,
-      },
-    ]
-  }
 
   // Function to fetch sensor data
   const fetchSensorData = async () => {
@@ -185,18 +103,7 @@ export function RealTimeMonitoring() {
       setLoading(true)
       setError(null)
 
-      if (useMockData) {
-        // Use mock data instead of API call
-        console.log("Using mock data instead of API call")
-        const mockData = generateMockData()
-        setSensorData(mockData)
-        setLastUpdated(new Date())
-        setLoading(false)
-        return
-      }
-
-      // Only make the API call if not using mock data
-      console.log("Fetching data from API")
+      console.log("Fetching data from Arduino Cloud API")
       const response = await fetch("/api/arduino-cloud")
 
       if (!response.ok) {
@@ -216,22 +123,17 @@ export function RealTimeMonitoring() {
       console.error("Error fetching sensor data:", err)
       setError(err instanceof Error ? err.message : "An unknown error occurred")
 
-      // Optionally fall back to mock data on error
-      if (!useMockData) {
-        console.log("API error, falling back to mock data")
-        const mockData = generateMockData()
-        setSensorData(mockData)
-        setLastUpdated(new Date())
-      }
+      // Fall back to empty data on error
+      setSensorData([])
     } finally {
       setLoading(false)
     }
   }
 
-  // Fetch data on component mount or when useMockData changes
+  // Fetch data on component mount
   useEffect(() => {
     fetchSensorData()
-  }, [useMockData])
+  }, [])
 
   // Auto-refresh setup
   useEffect(() => {
@@ -246,7 +148,7 @@ export function RealTimeMonitoring() {
     return () => {
       if (intervalId) clearInterval(intervalId)
     }
-  }, [autoRefresh, refreshInterval, useMockData])
+  }, [autoRefresh, refreshInterval])
 
   // Toggle sensor visibility
   const toggleSensorVisibility = (sensorId: string) => {
@@ -350,26 +252,6 @@ export function RealTimeMonitoring() {
           </div>
         </div>
       </div>
-
-      {/* Mock Data Toggle */}
-      <Card className="bg-amber-50 border-amber-200">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Database className="h-5 w-5 text-amber-600" />
-              <Label htmlFor="mock-data-toggle" className={`font-medium ${isUrdu ? "font-urdu" : ""}`}>
-                {t.useMockData}
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch id="mock-data-toggle" checked={useMockData} onCheckedChange={setUseMockData} />
-              <span className={`text-sm text-amber-700 ${isUrdu ? "font-urdu" : ""}`}>
-                {useMockData ? t.usingMockData : t.usingApiData}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* View Mode Selector */}
       <div className="flex justify-center mb-4">
