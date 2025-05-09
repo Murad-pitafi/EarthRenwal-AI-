@@ -13,11 +13,12 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
   type ChartOptions,
 } from "chart.js"
 
-// Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
+// Register ChartJS components including the Filler plugin
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
 interface HistoryDataPoint {
   value: number

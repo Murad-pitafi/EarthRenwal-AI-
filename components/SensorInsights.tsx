@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useUser } from "@/contexts/UserContext"
-import { AlertTriangle, CheckCircle, AlertCircle, Info } from "lucide-react"
+import { AlertTriangle, CheckCircle, AlertCircle } from "lucide-react"
 
 interface SensorData {
   id: string
@@ -106,17 +106,30 @@ export function SensorInsights({ sensorData }: SensorInsightsProps) {
       }
     }
 
-    // Add general insights
-    insights.push({
-      type: "info",
-      icon: <Info className="h-5 w-5 text-blue-500" />,
-      message: isUrdu ? "اگلے 24 گھنٹوں میں بارش کا امکان ہے" : "Rain is expected in the next 24 hours",
-    })
+    // Removed hardcoded weather prediction insights
 
     return insights
   }
 
   const insights = generateInsights()
+
+  // If no insights are available, show a message
+  if (insights.length === 0) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="pb-2">
+          <CardTitle className={`text-lg ${isUrdu ? "font-urdu" : ""}`}>
+            {isUrdu ? "انٹیلیجنٹ انسائٹس" : "Intelligent Insights"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className={`text-muted-foreground ${isUrdu ? "font-urdu" : ""}`}>
+            {isUrdu ? "کوئی انسائٹس دستیاب نہیں ہیں" : "No insights available"}
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="w-full">
