@@ -174,6 +174,10 @@ export function RealTimeMonitoring() {
         return "#8b5cf6" // Purple
       case "nit":
         return "#10b981" // Green
+      case "phos":
+        return "#84cc16" // Lime green
+      case "pot":
+        return "#059669" // Emerald
       default:
         return "#0ea5e9" // Sky blue
     }

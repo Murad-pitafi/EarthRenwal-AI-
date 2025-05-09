@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useUser } from "@/contexts/UserContext"
-import { Thermometer, Droplet, Wind, Leaf, Activity, Ruler, Zap, CloudRain, Sun, Gauge } from "lucide-react"
+import { Thermometer, Droplet, Wind, Leaf, Activity, Ruler, Zap, CloudRain, Sun, Gauge, Sprout } from "lucide-react"
 
 interface SensorDataCardProps {
   id: string
@@ -55,6 +55,10 @@ export function SensorDataCard({
         return <Sun className="h-5 w-5 text-yellow-500" />
       case "gauge":
         return <Gauge className="h-5 w-5 text-orange-500" />
+      case "seedling":
+        return <Leaf className="h-5 w-5 text-green-300" />
+      case "sprout":
+        return <Sprout className="h-5 w-5 text-green-600" />
       case "activity":
       default:
         return <Activity className="h-5 w-5 text-emerald-500" />
@@ -73,7 +77,16 @@ export function SensorDataCard({
   const getProgressColor = () => {
     switch (type) {
       case "soil":
-        return "bg-green-500"
+        switch (variableId) {
+          case "nit":
+            return "bg-green-500"
+          case "phos":
+            return "bg-green-300"
+          case "pot":
+            return "bg-green-600"
+          default:
+            return "bg-green-500"
+        }
       case "environment":
         switch (variableId) {
           case "temp":
@@ -118,6 +131,8 @@ export function SensorDataCard({
       gas: "گیس کی سطح",
       humd: "نمی",
       nit: "نائٹروجن",
+      phos: "فاسفورس",
+      pot: "پوٹاشیم",
       temp: "درجہ حرارت",
     }
 

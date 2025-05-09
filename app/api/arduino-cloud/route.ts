@@ -48,6 +48,24 @@ const SENSOR_METADATA = {
     min: 0,
     max: 100,
   },
+  phos: {
+    name: "Phosphorus",
+    unit: "ppm",
+    type: "soil",
+    icon: "seedling",
+    description: "Phosphorus level in soil",
+    min: 0,
+    max: 100,
+  },
+  pot: {
+    name: "Potassium",
+    unit: "ppm",
+    type: "soil",
+    icon: "sprout",
+    description: "Potassium level in soil",
+    min: 0,
+    max: 100,
+  },
   temp: {
     name: "Temperature",
     unit: "°C",
@@ -183,6 +201,8 @@ async function getPropertyValue(token: string, propertyId: string, propertyName:
         gas: 770,
         humd: 71,
         nit: 0, // No value in screenshot
+        phos: 0, // No value in screenshot
+        pot: 0, // No value in screenshot
         temp: 31,
       }
 
@@ -256,6 +276,32 @@ function generateDemoData() {
       type: "soil",
       icon: "leaf",
       description: "Nitrogen level in soil",
+      min: 0,
+      max: 100,
+    },
+    {
+      id: "phos-1",
+      variableId: "phos",
+      name: "Phosphorus",
+      value: 0, // No value in screenshot
+      unit: "ppm",
+      timestamp: new Date().toISOString(),
+      type: "soil",
+      icon: "seedling",
+      description: "Phosphorus level in soil",
+      min: 0,
+      max: 100,
+    },
+    {
+      id: "pot-1",
+      variableId: "pot",
+      name: "Potassium",
+      value: 0, // No value in screenshot
+      unit: "ppm",
+      timestamp: new Date().toISOString(),
+      type: "soil",
+      icon: "sprout",
+      description: "Potassium level in soil",
       min: 0,
       max: 100,
     },
@@ -377,6 +423,8 @@ export async function GET() {
               gas: 770,
               humd: 71,
               nit: 0,
+              phos: 0,
+              pot: 0,
               temp: 31,
             }
 

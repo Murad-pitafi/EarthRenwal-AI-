@@ -65,7 +65,13 @@ export function SensorHistoryChart({ sensorId, sensorName, variableId, unit, col
             baseValue = 71
             break
           case "nit":
-            baseValue = 0
+            baseValue = 15
+            break
+          case "phos":
+            baseValue = 10
+            break
+          case "pot":
+            baseValue = 20
             break
           case "temp":
             baseValue = 31
