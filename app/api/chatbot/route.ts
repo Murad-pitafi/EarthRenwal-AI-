@@ -68,16 +68,24 @@ For excessive nutrient levels:
     }
 
     // Update the prompt to include sensor data and formatting instructions
-    const prompt = `
-You are Mali Agent, an AI assistant specializing in agriculture and soil science.
+    const systemPrompt = `You are Mali Agent, an AI assistant specializing in agriculture and soil science.
 Respond in ${language === "ur" ? "Urdu" : "English"} language.
+${language === "ur" ? "Keep your responses in Urdu brief and concise. Use simple language and short sentences." : ""}
 
-${
-  isSoilQuery && sensorContext
-    ? `You have access to real-time sensor data from the farm. USE THIS DATA when answering questions about current soil conditions:
-${sensorContext}`
-    : "You are a helpful agricultural assistant. For general questions, provide friendly, conversational responses."
-}
+${sensorContext ? `Current Farm Sensor Data:\n${sensorContext}\n\nOverall Soil Health Assessment:\n${soilHealth}` : ""}
+
+Focus on providing practical farming advice, crop management techniques, soil health recommendations,
+pest control strategies, and sustainable agricultural practices.
+
+When discussing soil nutrients:
+- Nitrogen (N): Essential for leaf growth and green vegetation
+- Phosphorus (P): Important for root development and flowering
+- Potassium (K): Helps with overall plant health and disease resistance
+
+Be helpful, practical, and provide actionable advice based on the sensor data.`
+
+    const prompt = `
+${systemPrompt}
 
 IMPORTANT: Keep your responses VERY BRIEF - maximum 3-4 lines only.
 

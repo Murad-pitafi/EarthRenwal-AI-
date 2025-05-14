@@ -8,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Mic, Send, Volume2 } from "lucide-react"
+import { Loader2, Mic, Send, Volume2, Info } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { v4 as uuidv4 } from "uuid"
-import { speakText } from "@/lib/speech-utils"
+import { speakText, isUrduSupported } from "@/lib/speech-utils"
 
 interface Message {
   role: "user" | "assistant"
@@ -26,6 +26,7 @@ export default function Chatbot() {
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [urduTtsSupported, setUrduTtsSupported] = useState<boolean | null>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [sessionId, setSessionId] = useState<string>("")
 
@@ -36,6 +37,16 @@ export default function Chatbot() {
       .replace(/\*\*(.*?)\*\*/g, "$1") // Remove ** but keep the content
       .trim()
   }
+
+  useEffect(() => {
+    // Check if Urdu is supported by the browser
+    const checkUrduSupport = async () => {
+      const supported = await isUrduSupported()
+      setUrduTtsSupported(supported)
+    }
+
+    checkUrduSupport()
+  }, [])
 
   useEffect(() => {
     // Generate a session ID if one doesn't exist
@@ -86,7 +97,7 @@ export default function Chatbot() {
       setIsSpeaking(true)
       console.log(`Speaking text in ${language}: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`)
 
-      // Use our speech utility that handles fallback to Google TTS
+      // Use our speech utility
       await speakText(cleanTextForDisplay(text), language)
 
       setIsSpeaking(false)
@@ -296,10 +307,21 @@ export default function Chatbot() {
         </ScrollArea>
 
         {language === "ur" && (
-          <div className="mb-4 p-2 bg-green-50 border border-green-200 rounded text-sm">
-            {language === "en"
-              ? "Using Google Cloud TTS for Urdu speech."
-              : "اردو تقریر کے لیے گوگل کلاؤڈ ٹی ٹی ایس استعمال کر رہے ہیں۔"}
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded text-sm flex items-start gap-2">
+            <Info className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              {urduTtsSupported === true
+                ? language === "en"
+                  ? "Using browser's built-in Urdu voice."
+                  : "براؤزر کی بلٹ ان اردو آواز استعمال کر رہے ہیں۔"
+                : urduTtsSupported === false
+                  ? language === "en"
+                    ? "Your browser doesn't have native Urdu voice support. Speech quality may be limited."
+                    : "آپ کے براؤزر میں مقامی اردو آواز کی سپورٹ نہیں ہے۔ تقریر کا معیار محدود ہو سکتا ہے۔"
+                  : language === "en"
+                    ? "Checking Urdu voice support..."
+                    : "اردو آواز کی سپورٹ چیک کر رہے ہیں..."}
+            </div>
           </div>
         )}
 

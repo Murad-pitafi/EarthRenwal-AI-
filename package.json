@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google-cloud/text-to-speech": "latest",
     "@google/generative-ai": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@langchain/anthropic": "latest",

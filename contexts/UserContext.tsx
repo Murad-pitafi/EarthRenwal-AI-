@@ -67,3 +67,14 @@ export function useUser() {
   const context = useContext(UserContext)
   return context
 }
+
+// Custom hook to only get the language
+export function useLanguage() {
+  const context = useContext(UserContext)
+  if (!context) {
+    throw new Error("useLanguage must be used within a UserProvider")
+  }
+  return { language: context.language }
+}
+
+export type { Language }

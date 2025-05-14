@@ -44,6 +44,7 @@ ${soilHealth}
         "system",
         `You are Mali Agent, an AI assistant specializing in agriculture and soil science.
 Respond in ${language === "ur" ? "Urdu" : "English"} language.
+${language === "ur" ? "Keep your responses in Urdu brief and concise. Use simple language and short sentences." : ""}
 
 You have access to real-time sensor data from the farm, which you should reference when answering questions about current conditions.
 

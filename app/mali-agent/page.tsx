@@ -13,6 +13,7 @@ import { useUser } from "@/contexts/UserContext"
 import { useSensorData } from "@/contexts/SensorDataContext"
 import { toast } from "@/components/ui/use-toast"
 import { formatSensorDataForContext, getSoilHealthAssessment } from "@/lib/sensor-utils"
+import UrduSpeechButton from "@/components/UrduSpeechButton"
 
 interface Message {
   role: "user" | "assistant"
@@ -300,71 +301,51 @@ export default function MaliAgent() {
       return
     }
 
-    try {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel()
-      setIsSpeaking(true)
+    // Only use browser TTS for English
+    if (language === "en") {
+      try {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel()
+        setIsSpeaking(true)
 
-      const utterance = new SpeechSynthesisUtterance(text)
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = "en-US"
 
-      // Set language based on current app language
-      utterance.lang = language === "en" ? "en-US" : "ur-PK"
+        // Get an English voice if available
+        const englishVoice = availableVoices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
+        if (englishVoice) {
+          utterance.voice = englishVoice
+        }
 
-      // Get the best voice for the current language
-      const voice = getBestVoiceForLanguage(language)
+        // Set up event handlers
+        utterance.onend = () => {
+          setIsSpeaking(false)
+        }
 
-      if (voice) {
-        console.log(`Using voice: ${voice.name} (${voice.lang}) for ${language}`)
-        utterance.voice = voice
-      } else {
-        console.log(`No appropriate voice found for ${language}. Using default.`)
-      }
+        utterance.onerror = (event) => {
+          console.error("Speech synthesis error:", event)
+          setIsSpeaking(false)
+        }
 
-      // Set up event handlers
-      utterance.onend = () => {
-        console.log("Speech ended")
+        // Speak
+        window.speechSynthesis.speak(utterance)
+
+        // Safety timeout
+        setTimeout(
+          () => {
+            if (isSpeaking) {
+              setIsSpeaking(false)
+            }
+          },
+          Math.max(15000, text.length * 100),
+        )
+      } catch (error) {
+        console.error("Browser TTS error:", error)
         setIsSpeaking(false)
       }
-
-      utterance.onerror = (event) => {
-        console.error("Speech synthesis error:", event)
-        setIsSpeaking(false)
-        toast({
-          title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
-          description:
-            language === "en"
-              ? "An error occurred during speech synthesis."
-              : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-          variant: "destructive",
-        })
-      }
-
-      // Speak
-      window.speechSynthesis.speak(utterance)
-      console.log("Started speaking:", text.substring(0, 50) + "...")
-
-      // Safety timeout in case onend doesn't fire
-      setTimeout(
-        () => {
-          if (isSpeaking) {
-            console.log("Safety timeout triggered - resetting speaking state")
-            setIsSpeaking(false)
-          }
-        },
-        Math.max(15000, text.length * 100),
-      ) // Longer timeout for longer text
-    } catch (error) {
-      console.error("Browser TTS error:", error)
-      setIsSpeaking(false)
-      toast({
-        title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
-        description:
-          language === "en"
-            ? "An error occurred during speech synthesis."
-            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-        variant: "destructive",
-      })
     }
+    // For Urdu, we'll use the UrduSpeechButton component directly
+    // No need to handle Urdu here as it will be handled by the button
   }
 
   useEffect(() => {
@@ -500,8 +481,8 @@ export default function MaliAgent() {
 
       setMessages((prev) => [...prev, assistantMessage])
 
-      // Automatically speak the response
-      if (data.response) {
+      // Automatically speak the response only for English
+      if (data.response && language === "en") {
         speakText(formatResponseText(data.response))
       }
     } catch (error) {
@@ -593,27 +574,39 @@ export default function MaliAgent() {
                 {isRecording ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                 <span className="sr-only">{t.voice}</span>
               </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  if (messages.length > 0) {
-                    const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant")
-                    if (lastAssistantMessage) {
-                      speakText(cleanTextForDisplay(lastAssistantMessage.content))
-                      toast({
-                        title: language === "en" ? "Speaking..." : "بول رہا ہے...",
-                        description: language === "en" ? "The message is being spoken." : "پیغام بولا جا رہا ہے۔",
-                      })
+              {language === "en" ? (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (messages.length > 0) {
+                      const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant")
+                      if (lastAssistantMessage) {
+                        speakText(cleanTextForDisplay(lastAssistantMessage.content))
+                        toast({
+                          title: "Speaking...",
+                          description: "The message is being spoken.",
+                        })
+                      }
                     }
+                  }}
+                  disabled={isLoading || isSpeaking || !voicesLoaded}
+                  variant="outline"
+                  className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
+                >
+                  {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+                  <span className="sr-only">Text to speech</span>
+                </Button>
+              ) : (
+                <UrduSpeechButton
+                  text={
+                    messages.length > 0
+                      ? cleanTextForDisplay([...messages].reverse().find((m) => m.role === "assistant")?.content || "")
+                      : ""
                   }
-                }}
-                disabled={isLoading || isSpeaking || !voicesLoaded}
-                variant="outline"
-                className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
-              >
-                {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
-                <span className="sr-only">{language === "en" ? "Text to speech" : "متن سے تقریر"}</span>
-              </Button>
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                />
+              )}
             </form>
           </CardContent>
         </Card>
