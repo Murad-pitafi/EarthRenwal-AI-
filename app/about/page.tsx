@@ -3,7 +3,7 @@
 import { useUser } from "@/contexts/UserContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
-import { Leaf, Users, Target, Award, Globe, Sprout, BarChart2 } from "lucide-react"
+import { Leaf, Users, Target, Award, Globe, Sprout, BarChart2, Trophy, Calendar, MapPin } from "lucide-react"
 import { DataCollectionSection } from "@/components/DataCollectionSection"
 
 export default function About() {
@@ -89,6 +89,66 @@ export default function About() {
           description: "Formed key partnerships with ZettaMight and Agro TechVision to expand our reach",
         },
       ],
+      awards: "Our Awards & Recognition",
+      awardsSubtitle: "Celebrating our achievements and milestones",
+      awardsItems: [
+        {
+          name: "SciCom",
+          date: "March 2024",
+          location: "Karachi",
+          type: "recognition",
+          icon: "Trophy",
+        },
+        {
+          name: "Climate Ideathon",
+          date: "April 2024",
+          location: "Karachi",
+          type: "recognition",
+          icon: "Leaf",
+        },
+        {
+          name: "AIIC",
+          date: "June 2024",
+          location: "Islamabad",
+          type: "recognition",
+          icon: "Cpu",
+        },
+        {
+          name: "PASHA",
+          date: "September 2024",
+          location: "Karachi",
+          type: "recognition",
+          icon: "Code",
+        },
+        {
+          name: "IEEP Winner",
+          date: "September 2024",
+          location: "Karachi",
+          type: "winner",
+          icon: "Award",
+        },
+        {
+          name: "Zindigi Prize",
+          date: "September 2024",
+          location: "Hyderabad",
+          type: "recognition",
+          icon: "Wallet",
+        },
+        {
+          name: "Teknofest Top 20",
+          date: "November 2024",
+          location: "Karachi",
+          type: "recognition",
+          icon: "Globe",
+        },
+        {
+          name: "YESIST12 Winner",
+          date: "May 2025",
+          location: "Karachi",
+          type: "winner",
+          icon: "Trophy",
+        },
+      ],
     },
     ur: {
       title: "ارتھ رینیوول۔اے آئی کے بارے میں",
@@ -169,6 +229,66 @@ export default function About() {
           description: "اپنی پہنچ کو بڑھانے کے لیے زیٹامائٹ اور ایگرو ٹیک ویژن کے ساتھ اہم شراکت داریاں قائم کیں",
         },
       ],
+      awards: "ہمارے ایوارڈز اور اعتراف",
+      awardsSubtitle: "ہماری کامیابیوں اور سنگ میل کا جشن",
+      awardsItems: [
+        {
+          name: "سائی کوم",
+          date: "مارچ 2024",
+          location: "کراچی",
+          type: "recognition",
+          icon: "Trophy",
+        },
+        {
+          name: "کلائمیٹ آئیڈیاتھون",
+          date: "اپریل 2024",
+          location: "کراچی",
+          type: "recognition",
+          icon: "Leaf",
+        },
+        {
+          name: "اے آئی آئی سی",
+          date: "جون 2024",
+          location: "اسلام آباد",
+          type: "recognition",
+          icon: "Cpu",
+        },
+        {
+          name: "پاشا",
+          date: "ستمبر 2024",
+          location: "کراچی",
+          type: "recognition",
+          icon: "Code",
+        },
+        {
+          name: "آئی ای ای پی ونر",
+          date: "ستمبر 2024",
+          location: "کراچی",
+          type: "winner",
+          icon: "Award",
+        },
+        {
+          name: "زندگی پرائز",
+          date: "ستمبر 2024",
+          location: "حیدرآباد",
+          type: "recognition",
+          icon: "Wallet",
+        },
+        {
+          name: "ٹیکنوفیسٹ ٹاپ 20",
+          date: "نومبر 2024",
+          location: "کراچی",
+          type: "recognition",
+          icon: "Globe",
+        },
+        {
+          name: "یسسٹ 12 ونر",
+          date: "مئی 2025",
+          location: "کراچی",
+          type: "winner",
+          icon: "Trophy",
+        },
+      ],
     },
   }
 
@@ -223,6 +343,108 @@ export default function About() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Awards & Recognition Section */}
+      <section className="bg-gradient-to-r from-green-50 to-white rounded-xl p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+            <Trophy className="h-6 w-6 text-green-600" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold">{t.awards}</h2>
+            <p className="text-gray-600">{t.awardsSubtitle}</p>
+          </div>
+        </div>
+
+        {/* Awards Chain */}
+        <div className="mt-12 relative">
+          {/* Chain Design */}
+          <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-green-200 via-green-400 to-green-200 transform -translate-y-1/2 z-0"></div>
+
+          <div className="flex flex-col md:flex-row md:flex-wrap justify-center gap-6 md:gap-4">
+            {t.awardsItems.map((award, index) => {
+              // Dynamically import icons based on the icon name
+              let IconComponent
+              switch (award.icon) {
+                case "Trophy":
+                  IconComponent = Trophy
+                  break
+                case "Leaf":
+                  IconComponent = Leaf
+                  break
+                case "Award":
+                  IconComponent = Award
+                  break
+                case "Cpu":
+                  IconComponent = Target
+                  break
+                case "Code":
+                  IconComponent = Sprout
+                  break
+                case "Lightbulb":
+                  IconComponent = Award
+                  break
+                case "Wallet":
+                  IconComponent = BarChart2
+                  break
+                case "Globe":
+                  IconComponent = Globe
+                  break
+                default:
+                  IconComponent = Trophy
+              }
+
+              return (
+                <div
+                  key={index}
+                  className={`relative z-10 w-full md:w-[calc(25%-1rem)] ${
+                    index % 2 === 0 ? "md:mt-0 md:mb-16" : "md:mt-16 md:mb-0"
+                  }`}
+                >
+                  <div
+                    className={`
+                      bg-white rounded-lg shadow-md p-4 border-t-4 
+                      ${award.type === "winner" ? "border-green-500" : "border-green-300"}
+                      transition-all hover:shadow-lg hover:-translate-y-1
+                    `}
+                  >
+                    <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center">
+                      <div
+                        className={`w-8 h-8 rounded-full ${award.type === "winner" ? "bg-green-500" : "bg-green-200"} flex items-center justify-center`}
+                      >
+                        <IconComponent
+                          className={`h-4 w-4 ${award.type === "winner" ? "text-white" : "text-green-700"}`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 text-center">
+                      <h3
+                        className={`font-bold text-lg ${award.type === "winner" ? "text-green-700" : "text-gray-800"}`}
+                      >
+                        {award.name}
+                      </h3>
+
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-2">
+                        <Calendar className="h-3 w-3" />
+                        <span>{award.date}</span>
+                      </div>
+
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-1">
+                        <MapPin className="h-3 w-3" />
+                        <span>{award.location}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vertical connector for mobile */}
+                  <div className="md:hidden absolute left-1/2 bottom-0 w-0.5 h-4 bg-green-200 transform translate-x-[-50%] translate-y-[100%]"></div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Values Section */}
       <section className="bg-gradient-to-r from-green-50 to-white rounded-xl p-8">

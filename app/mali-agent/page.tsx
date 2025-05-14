@@ -2,18 +2,17 @@
 
 import type React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Mic, Send, Volume2, Gauge } from "lucide-react"
+import { Loader2, Mic, Send, Gauge } from "lucide-react"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
 import { useSensorData } from "@/contexts/SensorDataContext"
 import { toast } from "@/components/ui/use-toast"
 import { formatSensorDataForContext, getSoilHealthAssessment } from "@/lib/sensor-utils"
-import UrduSpeechButton from "@/components/UrduSpeechButton"
 
 interface Message {
   role: "user" | "assistant"
@@ -48,6 +47,8 @@ export default function MaliAgent() {
   const [formattedSensorData, setFormattedSensorData] = useState("")
   const [soilHealth, setSoilHealth] = useState("")
   const [showSensorData, setShowSensorData] = useState(false)
+  const lastMessageRef = useRef<string | null>(null)
+  const isUrdu = language === "ur"
 
   const translations = {
     en: {
@@ -67,6 +68,15 @@ export default function MaliAgent() {
       hideSensorData: "Hide Sensor Data",
       currentReadings: "Current Sensor Readings",
       soilHealth: "Soil Health Assessment",
+      listening: "Listening...",
+      speakNow: "Speak now",
+      notSupported: "Not Supported",
+      speechRecognitionNotSupported: "Speech recognition is not supported in your browser.",
+      error: "Error",
+      failedToRecognize: "Failed to recognize speech. Please try again.",
+      failedToStart: "Failed to start speech recognition. Please try again.",
+      speaking: "Speaking...",
+      messageBeingSpoken: "The message is being spoken.",
     },
     ur: {
       title: "مالی ایجنٹ اے آئی",
@@ -85,6 +95,15 @@ export default function MaliAgent() {
       hideSensorData: "سینسر ڈیٹا چھپائیں",
       currentReadings: "موجودہ سینسر ریڈنگز",
       soilHealth: "مٹی کی صحت کا تجزیہ",
+      listening: "سن رہا ہے...",
+      speakNow: "اب بولیں",
+      notSupported: "سپورٹ نہیں ہے",
+      speechRecognitionNotSupported: "آپ کے براؤزر میں اسپیچ ریکگنیشن سپورٹ نہیں ہے۔",
+      error: "خرابی",
+      failedToRecognize: "تقریر کو پہچاننے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
+      failedToStart: "اسپیچ ریکگنیشن شروع کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
+      speaking: "بول رہا ہے...",
+      messageBeingSpoken: "پیغام بولا جا رہا ہے۔",
     },
   }
 
@@ -344,8 +363,52 @@ export default function MaliAgent() {
         setIsSpeaking(false)
       }
     }
-    // For Urdu, we'll use the UrduSpeechButton component directly
-    // No need to handle Urdu here as it will be handled by the button
+    // For Urdu, we'll use the ElevenLabs API directly
+  }
+
+  // Function to speak Urdu text using ElevenLabs
+  const speakUrduText = async (text: string) => {
+    if (!text.trim()) return
+
+    try {
+      setIsSpeaking(true)
+      const response = await fetch("/api/elevenlabs-tts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`ElevenLabs API error: ${response.status}`)
+      }
+
+      const audioBlob = await response.blob()
+      const audioUrl = URL.createObjectURL(audioBlob)
+      const audio = new Audio(audioUrl)
+
+      audio.onended = () => {
+        setIsSpeaking(false)
+        URL.revokeObjectURL(audioUrl) // Clean up
+      }
+
+      audio.onerror = () => {
+        console.error("Audio playback error")
+        setIsSpeaking(false)
+        URL.revokeObjectURL(audioUrl) // Clean up
+      }
+
+      await audio.play()
+    } catch (error) {
+      console.error("Error speaking Urdu text:", error)
+      setIsSpeaking(false)
+      toast({
+        title: isUrdu ? "آواز میں خرابی" : "Speech Error",
+        description: isUrdu ? "متن کو آواز میں تبدیل کرنے میں خرابی۔" : "Error converting text to speech.",
+        variant: "destructive",
+      })
+    }
   }
 
   useEffect(() => {
@@ -361,7 +424,30 @@ export default function MaliAgent() {
         content: welcomeMessage,
       },
     ])
+
+    // Speak the welcome message
+    if (language === "en") {
+      speakText(welcomeMessage)
+    } else {
+      speakUrduText(welcomeMessage)
+    }
   }, [language])
+
+  // Auto-speak new assistant messages
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1]
+
+    // Only speak if it's a new assistant message and not the same as the last one we spoke
+    if (lastMessage && lastMessage.role === "assistant" && lastMessage.content !== lastMessageRef.current) {
+      lastMessageRef.current = lastMessage.content
+
+      if (language === "en") {
+        speakText(cleanTextForDisplay(lastMessage.content))
+      } else {
+        speakUrduText(cleanTextForDisplay(lastMessage.content))
+      }
+    }
+  }, [messages, language])
 
   const handleVoiceInput = () => {
     // Check if browser supports speech recognition
@@ -371,11 +457,8 @@ export default function MaliAgent() {
 
     if (!SpeechRecognition) {
       toast({
-        title: language === "en" ? "Not Supported" : "سپورٹ نہیں ہے",
-        description:
-          language === "en"
-            ? "Speech recognition is not supported in your browser."
-            : "آپ کے براؤزر میں اسپیچ ریکگنیشن سپورٹ نہیں ہے۔",
+        title: t.notSupported,
+        description: t.speechRecognitionNotSupported,
         variant: "destructive",
       })
       return
@@ -384,8 +467,8 @@ export default function MaliAgent() {
     try {
       setIsRecording(true)
       toast({
-        title: language === "en" ? "Listening..." : "سن رہا ہے...",
-        description: language === "en" ? "Speak now" : "اب بولیں",
+        title: t.listening,
+        description: t.speakNow,
       })
 
       const recognition = new SpeechRecognition()
@@ -407,11 +490,8 @@ export default function MaliAgent() {
         console.error("Speech recognition error:", event.error)
         setIsRecording(false)
         toast({
-          title: language === "en" ? "Error" : "خرابی",
-          description:
-            language === "en"
-              ? "Failed to recognize speech. Please try again."
-              : "تقریر کو پہچاننے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
+          title: t.error,
+          description: t.failedToRecognize,
           variant: "destructive",
         })
       }
@@ -425,11 +505,8 @@ export default function MaliAgent() {
       console.error("Speech recognition error:", error)
       setIsRecording(false)
       toast({
-        title: language === "en" ? "Error" : "خرابی",
-        description:
-          language === "en"
-            ? "Failed to start speech recognition. Please try again."
-            : "اسپیچ ریکگنیشن شروع کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
+        title: t.error,
+        description: t.failedToStart,
         variant: "destructive",
       })
     }
@@ -481,10 +558,7 @@ export default function MaliAgent() {
 
       setMessages((prev) => [...prev, assistantMessage])
 
-      // Automatically speak the response only for English
-      if (data.response && language === "en") {
-        speakText(formatResponseText(data.response))
-      }
+      // Auto-speaking is now handled by the useEffect
     } catch (error) {
       console.error("Error:", error)
       // Fallback responses in case of API failure
@@ -574,38 +648,15 @@ export default function MaliAgent() {
                 {isRecording ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                 <span className="sr-only">{t.voice}</span>
               </Button>
-              {language === "en" ? (
+              {isSpeaking && (
                 <Button
                   type="button"
-                  onClick={() => {
-                    if (messages.length > 0) {
-                      const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant")
-                      if (lastAssistantMessage) {
-                        speakText(cleanTextForDisplay(lastAssistantMessage.content))
-                        toast({
-                          title: "Speaking...",
-                          description: "The message is being spoken.",
-                        })
-                      }
-                    }
-                  }}
-                  disabled={isLoading || isSpeaking || !voicesLoaded}
                   variant="outline"
-                  className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 bg-blue-100"
                 >
-                  {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
-                  <span className="sr-only">Text to speech</span>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="sr-only">{isUrdu ? "بول رہا ہے..." : "Speaking..."}</span>
                 </Button>
-              ) : (
-                <UrduSpeechButton
-                  text={
-                    messages.length > 0
-                      ? cleanTextForDisplay([...messages].reverse().find((m) => m.role === "assistant")?.content || "")
-                      : ""
-                  }
-                  variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                />
               )}
             </form>
           </CardContent>

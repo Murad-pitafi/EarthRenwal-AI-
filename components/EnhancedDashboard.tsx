@@ -69,8 +69,24 @@ export function EnhancedDashboard() {
     return defaultValue
   }, [])
 
-  // Use Groq for soil analysis
-  const _useGroqAnalysis = useCallback(
+  // State to hold the sensor values for Groq analysis
+  const [groqSensorValues, setGroqSensorValues] = useState<{
+    nitrogen: number
+    phosphorus: number
+    potassium: number
+    temperature: number
+    humidity: number
+    gas_level: number
+  }>({
+    nitrogen: 45,
+    phosphorus: 15,
+    potassium: 150,
+    temperature: 28,
+    humidity: 65,
+    gas_level: 500,
+  })
+
+  const useGroqAnalysis = useCallback(
     async (
       nitrogen: number,
       phosphorus: number,
@@ -79,15 +95,6 @@ export function EnhancedDashboard() {
       humidity: number,
       gas_level: number,
     ) => {
-      console.log("Using Groq analysis with values:", {
-        nitrogen,
-        phosphorus,
-        potassium,
-        temperature,
-        humidity,
-        gas_level,
-      })
-
       try {
         // Call the Groq API
         const response = await fetch("/api/groq-soil-analysis", {
@@ -127,47 +134,23 @@ export function EnhancedDashboard() {
     [],
   )
 
-  const useGroqAnalysis = useCallback(
-    async (sensors: ArduinoSensorReading[]) => {
-      // Extract all required values
-      const nitrogen = getSensorValue(sensors, "nit", 45)
-      const phosphorus = getSensorValue(sensors, "phos", 15)
-      const potassium = getSensorValue(sensors, "pot", 150)
-      const temperature = getSensorValue(sensors, "temp", 28)
-      const humidity = getSensorValue(sensors, "humd", 65)
-      const gas_level = getSensorValue(sensors, "gas", 500)
-
-      return _useGroqAnalysis(nitrogen, phosphorus, potassium, temperature, humidity, gas_level)
-    },
-    [_useGroqAnalysis, getSensorValue],
-  )
-
   // Predict soil health using Groq
   const predictSoilHealth = useCallback(
     async (sensors: ArduinoSensorReading[]) => {
       try {
         setPredictingHealth(true)
 
-        // Extract all required values for the model
-        const nitrogen = getSensorValue(sensors, "nit", 45)
-        const phosphorus = getSensorValue(sensors, "phos", 15)
-        const potassium = getSensorValue(sensors, "pot", 150)
-        const temperature = getSensorValue(sensors, "temp", 28)
-        const humidity = getSensorValue(sensors, "humd", 65)
-        const gas_level = getSensorValue(sensors, "gas", 500)
-
-        console.log("Soil parameters:", {
-          nitrogen,
-          phosphorus,
-          potassium,
-          temperature,
-          humidity,
-          gas_level,
-        })
-
         // Use Groq analysis
         try {
-          const result = await useGroqAnalysis(sensors)
+          // Extract all required values for the model
+          const nitrogen = getSensorValue(sensors, "nit", 45)
+          const phosphorus = getSensorValue(sensors, "phos", 15)
+          const potassium = getSensorValue(sensors, "pot", 150)
+          const temperature = getSensorValue(sensors, "temp", 28)
+          const humidity = getSensorValue(sensors, "humd", 65)
+          const gas_level = getSensorValue(sensors, "gas", 500)
+
+          const result = await useGroqAnalysis(nitrogen, phosphorus, potassium, temperature, humidity, gas_level)
           console.log("Soil prediction set to:", result)
         } catch (error) {
           console.error("Error with Groq analysis:", error)
@@ -399,6 +382,23 @@ export function EnhancedDashboard() {
 
   // Get the current soil prediction for display
   const displaySoilPrediction = getCurrentSoilPrediction()
+
+  // Update the sensor values for Groq analysis
+  useEffect(() => {
+    if (sensorData.length > 0) {
+      setGroqSensorValues({
+        nitrogen: getSensorValue(sensorData, "nit", 45),
+        phosphorus: getSensorValue(sensorData, "phos", 15),
+        potassium: getSensorValue(sensorData, "pot", 150),
+        temperature: getSensorValue(sensorData, "temp", 28),
+        humidity: getSensorValue(sensorData, "humd", 65),
+        gas_level: getSensorValue(sensorData, "gas", 500),
+      })
+    }
+  }, [sensorData, getSensorValue])
+
+  // Call useGroqAnalysis unconditionally
+  // const groqAnalysisResult = useGroqAnalysis(groqSensorValues.nitrogen, groqSensorValues.phosphorus, groqSensorValues.potassium, groqSensorValues.temperature, groqSensorValues.humidity, groqSensorValues.gas_level);
 
   return (
     <div className="space-y-6">

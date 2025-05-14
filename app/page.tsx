@@ -20,6 +20,7 @@ export default function Home() {
       heroTitle: "EarthRenewal.AI",
       heroSubtitle: "Empowering sustainable agriculture through AI-driven solutions",
       exploreButton: "Explore Mali Agent AI",
+      realTimeButton: "Real-Time Monitoring",
       soilAnalysisButton: "Soil Analysis",
       learnAboutJourney: "Learn About Our Journey",
       solutions: "Our Solutions",
@@ -50,7 +51,8 @@ export default function Home() {
     ur: {
       heroTitle: "ارتھ رینیوول۔اے آئی",
       heroSubtitle: "اے آئی پر مبنی حل کے ذریعے پائیدار زراعت کو بااختیار بنانا",
-      exploreButton: "مالی ایجنٹ اے آئی کو دریافت کریں",
+      exploreButton: "مالی ایجنٹ اے آئی",
+      realTimeButton: "حقیقی وقت کی نگرانی",
       soilAnalysisButton: "مٹی کا تجزیہ",
       learnAboutJourney: "ہماری سفر کے بارے میں جانیں",
       solutions: "ہمارے حل",
@@ -88,7 +90,6 @@ export default function Home() {
       <div className="relative h-[500px] w-full rounded-xl overflow-hidden">
         <Image src="/images/background.jpg" alt="Agricultural landscape" fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-r from-green-900/70 to-green-600/40 flex flex-col items-center justify-center text-center p-4">
-          <Image src="/images/logo.png" alt="EarthRenewal.AI Logo" width={120} height={120} className="mb-6" />
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">{t.heroTitle}</h1>
           <p className="text-xl md:text-2xl text-white mb-8 max-w-2xl">{t.heroSubtitle}</p>
           <div className="flex flex-wrap gap-4 justify-center">
@@ -103,8 +104,8 @@ export default function Home() {
               variant="outline"
               className="bg-white/10 text-white hover:bg-white/20 border-white"
             >
-              <Link href="/soil-analysis">
-                {t.soilAnalysisButton} <ArrowRight className="ml-2 h-4 w-4" />
+              <Link href="/real-time-monitoring">
+                {t.realTimeButton} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
