@@ -13,11 +13,13 @@ export default function MediaGallery() {
       title: "Media Gallery",
       fieldWork: "Field Work",
       events: "Events & Presentations",
+      soilAnalysis: "Soil Analysis & Research",
     },
     ur: {
       title: "میڈیا گیلری",
       fieldWork: "فیلڈ ورک",
       events: "تقریبات اور پریزنٹیشنز",
+      soilAnalysis: "مٹی کا تجزیہ اور تحقیق",
     },
   }
 
@@ -25,6 +27,7 @@ export default function MediaGallery() {
 
   const fieldWorkImages = ["/images/media_gallery_1.jpg", "/images/media_gallery_2.jpg", "/images/media_gallery_4.jpg"]
   const eventsImages = ["/images/media_gallery_3.jpg", "/images/media_gallery_5.jpg"]
+  const soilAnalysisImages = ["/images/field_work_soil_analysis_1.jpg", "/images/field_work_soil_analysis_2.jpg"]
 
   return (
     <div className="space-y-8 py-8">
@@ -37,6 +40,15 @@ export default function MediaGallery() {
           </CardHeader>
           <CardContent>
             <MediaGallerySlider images={fieldWorkImages} />
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-green-50 to-white">
+          <CardHeader>
+            <CardTitle>{t.soilAnalysis}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MediaGallerySlider images={soilAnalysisImages} />
           </CardContent>
         </Card>
 

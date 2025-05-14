@@ -1,18 +1,25 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Volume2, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
+import { getVoices, findBestVoice, speakText } from "@/lib/speech-utils"
 
 export default function TestSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [selectedVoice, setSelectedVoice] = useState<string>("")
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("en")
   const [testMessage, setTestMessage] = useState(
     "Welcome to EarthRenewal.AI. This is a test of the speech synthesis functionality.",
+  )
+  const [urduTestMessage, setUrduTestMessage] = useState(
+    "ارتھ رینیول اے آئی میں خوش آمدید۔ یہ تقریر کی صلاحیت کا ٹیسٹ ہے۔",
   )
 
   // Check if speech synthesis is supported
@@ -21,28 +28,27 @@ export default function TestSpeech() {
       setSpeechSupported(true)
 
       // Get available voices
-      const getVoices = () => {
-        const availableVoices = window.speechSynthesis.getVoices()
+      const loadVoices = async () => {
+        const availableVoices = await getVoices()
         setVoices(availableVoices)
 
         // Set a default voice if available
         if (availableVoices.length > 0) {
           // Try to find an English voice
-          const englishVoice = availableVoices.find((voice) => voice.lang.includes("en-"))
-          setSelectedVoice(englishVoice?.name || availableVoices[0].name)
+          const englishVoice = await findBestVoice("en")
+          if (englishVoice) {
+            setSelectedVoice(englishVoice.name)
+          } else {
+            setSelectedVoice(availableVoices[0].name)
+          }
         }
       }
 
-      // Chrome loads voices asynchronously
-      if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = getVoices
-      }
-
-      getVoices()
+      loadVoices()
     }
   }, [])
 
-  const speakText = (text: string) => {
+  const handleSpeakText = async () => {
     if (!speechSupported) {
       toast({
         title: "Speech Synthesis Not Supported",
@@ -53,43 +59,19 @@ export default function TestSpeech() {
     }
 
     try {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel()
       setIsSpeaking(true)
 
-      const utterance = new SpeechSynthesisUtterance(text)
+      // Use the appropriate message based on selected language
+      const textToSpeak = selectedLanguage === "ur" ? urduTestMessage : testMessage
 
-      // Set the selected voice if available
-      if (selectedVoice) {
-        const voice = voices.find((v) => v.name === selectedVoice)
-        if (voice) {
-          utterance.voice = voice
-        }
-      }
+      // Speak the text using our utility
+      await speakText(textToSpeak, selectedLanguage)
 
-      utterance.rate = 1.0
-      utterance.pitch = 1.0
-
-      // Set up event handlers
-      utterance.onend = () => {
-        setIsSpeaking(false)
-        toast({
-          title: "Speech Complete",
-          description: "The text has been spoken successfully.",
-        })
-      }
-
-      utterance.onerror = (event) => {
-        console.error("Speech synthesis error:", event)
-        setIsSpeaking(false)
-        toast({
-          title: "Speech Error",
-          description: "An error occurred during speech synthesis.",
-          variant: "destructive",
-        })
-      }
-
-      window.speechSynthesis.speak(utterance)
+      setIsSpeaking(false)
+      toast({
+        title: "Speech Complete",
+        description: "The text has been spoken successfully.",
+      })
     } catch (error) {
       console.error("Error in text-to-speech:", error)
       setIsSpeaking(false)
@@ -98,6 +80,21 @@ export default function TestSpeech() {
         description: "An error occurred during speech synthesis.",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleVoiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedVoice(e.target.value)
+  }
+
+  const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const lang = e.target.value
+    setSelectedLanguage(lang)
+
+    // Find best voice for selected language
+    const bestVoice = await findBestVoice(lang)
+    if (bestVoice) {
+      setSelectedVoice(bestVoice.name)
     }
   }
 
@@ -125,14 +122,19 @@ export default function TestSpeech() {
               <span>{voices.length}</span>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1">Select Language:</label>
+              <select value={selectedLanguage} onChange={handleLanguageChange} className="w-full p-2 border rounded">
+                <option value="en">English</option>
+                <option value="ur">Urdu</option>
+                <option value="hi">Hindi</option>
+              </select>
+            </div>
+
             {voices.length > 0 && (
               <div>
                 <label className="block text-sm font-medium mb-1">Select Voice:</label>
-                <select
-                  value={selectedVoice}
-                  onChange={(e) => setSelectedVoice(e.target.value)}
-                  className="w-full p-2 border rounded"
-                >
+                <select value={selectedVoice} onChange={handleVoiceChange} className="w-full p-2 border rounded">
                   {voices.map((voice, index) => (
                     <option key={index} value={voice.name}>
                       {voice.name} ({voice.lang}) {voice.default ? "- Default" : ""}
@@ -143,17 +145,22 @@ export default function TestSpeech() {
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-1">Test Message:</label>
+              <label className="block text-sm font-medium mb-1">
+                Test Message ({selectedLanguage === "ur" ? "Urdu" : "English"}):
+              </label>
               <textarea
-                value={testMessage}
-                onChange={(e) => setTestMessage(e.target.value)}
+                value={selectedLanguage === "ur" ? urduTestMessage : testMessage}
+                onChange={(e) =>
+                  selectedLanguage === "ur" ? setUrduTestMessage(e.target.value) : setTestMessage(e.target.value)
+                }
                 className="w-full p-2 border rounded"
                 rows={3}
+                dir={selectedLanguage === "ur" ? "rtl" : "ltr"}
               />
             </div>
 
             <Button
-              onClick={() => speakText(testMessage)}
+              onClick={handleSpeakText}
               disabled={!speechSupported || isSpeaking}
               className="flex items-center gap-2"
             >
@@ -175,41 +182,29 @@ export default function TestSpeech() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Chatbot Speech Implementation</CardTitle>
+          <CardTitle>Urdu Speech Support</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p>
-              The chatbot's speech functionality uses the Web Speech API's SpeechSynthesis interface to convert text to
-              speech. Here's how it works:
-            </p>
+            <p>The application now has improved support for Urdu speech synthesis. Here's how it works:</p>
 
             <ul className="list-disc pl-5 space-y-2">
+              <li>The system first tries to find a native Urdu voice (ur, ur-PK, or ur-IN language codes).</li>
+              <li>If no Urdu voice is available, it falls back to Hindi voices (similar language region).</li>
               <li>
-                When you click the speaker button in the chatbot, it takes the latest assistant message and passes it to
-                the speech synthesis engine.
+                If no Hindi voice is found, it tries any South Asian voice (with 'in' or 'pk' in the language code).
               </li>
-              <li>
-                The speech synthesis engine then converts the text to speech and plays it through your device's
-                speakers.
-              </li>
-              <li>The implementation handles various states like speaking, errors, and completion.</li>
+              <li>As a last resort, it uses the default system voice.</li>
             </ul>
 
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-              <h3 className="font-semibold mb-2">Common Issues:</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Some browsers may have limited speech synthesis support</li>
-                <li>Voice quality varies across browsers and operating systems</li>
-                <li>Language support depends on the available voices in your browser</li>
-                <li>Mobile devices may have additional restrictions on audio playback</li>
-              </ul>
+              <h3 className="font-semibold mb-2">Voice Availability:</h3>
+              <p>
+                Voice availability depends on your operating system and browser. Windows, macOS, Android, and iOS all
+                have different built-in voices. You may need to install additional language packs on your operating
+                system to get better Urdu voice support.
+              </p>
             </div>
-
-            <p>
-              If the test above works but the chatbot speech doesn't, there might be an issue with how the speech
-              function is being called in the Chatbot component.
-            </p>
           </div>
         </CardContent>
       </Card>

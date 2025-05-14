@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Home,
-  Microscope,
   Award,
   Cloud,
   MessageSquare,
@@ -16,10 +15,10 @@ import {
   BarChart,
   Menu,
   ChevronDown,
-  Volume2,
   Activity,
   Database,
   FlaskRound,
+  Info,
 } from "lucide-react"
 import Image from "next/image"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -34,36 +33,30 @@ export function Navigation() {
     en: {
       home: "Home",
       maliAgent: "Mali Agent AI",
-      services: "Services",
-      soilAnalysis: "Soil Analysis",
+      resources: "Resources",
       mediaGallery: "Media Gallery",
       achievements: "Achievements",
       weather: "Weather",
       contact: "Contact",
       riceStats: "Rice Statistics",
-      precisionFarming: "Precision Farming",
-      soilMonitoring: "Soil Monitoring",
-      collaborations: "Collaborations",
       realTimeMonitoring: "Real-time Monitoring",
       dataManagement: "Data Management",
       soilTest: "Soil Test",
+      about: "About",
     },
     ur: {
       home: "ہوم",
       maliAgent: "مالی ایجنٹ اے آئی",
-      services: "خدمات",
-      soilAnalysis: "مٹی کا تجزیہ",
+      resources: "وسائل",
       mediaGallery: "میڈیا گیلری",
       achievements: "کامیابیاں",
       weather: "موسم",
       contact: "رابطہ",
       riceStats: "چاول کے اعداد و شمار",
-      precisionFarming: "درست کاشتکاری",
-      soilMonitoring: "مٹی کی نگرانی",
-      collaborations: "شراکت داریاں",
       realTimeMonitoring: "ریئل ٹائم مانیٹرنگ",
       dataManagement: "ڈیٹا مینجمنٹ",
       soilTest: "مٹی کا ٹیسٹ",
+      about: "ہمارے بارے میں",
     },
   }
 
@@ -74,6 +67,11 @@ export function Navigation() {
       href: "/",
       label: t.home,
       icon: Home,
+    },
+    {
+      href: "/about",
+      label: t.about,
+      icon: Info,
     },
     {
       href: "/mali-agent",
@@ -107,26 +105,11 @@ export function Navigation() {
     },
   ]
 
-  const serviceRoutes = [
-    {
-      href: "/soil-analysis",
-      label: t.soilAnalysis,
-      icon: Microscope,
-    },
-    {
-      href: "/rice-statistics",
-      label: t.riceStats,
-      icon: BarChart,
-    },
+  const resourceRoutes = [
     {
       href: "/media-gallery",
       label: t.mediaGallery,
       icon: ImageIcon,
-    },
-    {
-      href: "/test-speech",
-      label: language === "en" ? "Test Speech" : "ٹیسٹ اسپیچ",
-      icon: Volume2,
     },
     {
       href: "/achievements",
@@ -134,14 +117,9 @@ export function Navigation() {
       icon: Award,
     },
     {
-      href: "/precision-farming",
-      label: t.precisionFarming,
-      icon: Microscope,
-    },
-    {
-      href: "/soil-monitoring",
-      label: t.soilMonitoring,
-      icon: Microscope,
+      href: "/rice-statistics",
+      label: t.riceStats,
+      icon: BarChart,
     },
   ]
 
@@ -174,7 +152,7 @@ export function Navigation() {
           )
         })}
 
-        {/* Services Dropdown */}
+        {/* Resources Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -182,20 +160,20 @@ export function Navigation() {
               size="sm"
               className={cn(
                 "flex flex-col md:flex-row items-center gap-1 h-auto py-2",
-                serviceRoutes.some((route) => pathname === route.href)
+                resourceRoutes.some((route) => pathname === route.href)
                   ? "text-green-600 bg-green-50"
                   : "text-muted-foreground hover:text-green-600",
               )}
             >
               <Menu className="h-4 w-4" />
               <span className="text-xs md:text-sm flex items-center">
-                {t.services}
+                {t.resources}
                 <ChevronDown className="h-3 w-3 ml-1" />
               </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            {serviceRoutes.map((route) => {
+            {resourceRoutes.map((route) => {
               const Icon = route.icon
               return (
                 <DropdownMenuItem key={route.href} asChild>

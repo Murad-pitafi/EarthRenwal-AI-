@@ -1,116 +1,78 @@
 "use client"
-
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import Image from "next/image"
-import { Card } from "@/components/ui/card"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useUser } from "@/contexts/UserContext"
 
 interface MediaGallerySliderProps {
   images: string[]
-  autoPlay?: boolean
-  interval?: number
-  title?: string
 }
 
-export function MediaGallerySlider({ images, autoPlay = true, interval = 5000, title }: MediaGallerySliderProps) {
+export function MediaGallerySlider({ images }: MediaGallerySliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const { language } = useUser()
 
-  const resetTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
+  const getImageDescription = (imagePath: string) => {
+    const descriptions = {
+      en: {
+        "/images/media_gallery_1.jpg": "Team members working in rice fields",
+        "/images/media_gallery_2.jpg": "Examining crop growth in experimental plots",
+        "/images/media_gallery_3.jpg": "Presentation at the agricultural conference",
+        "/images/media_gallery_4.jpg": "Collecting field samples for analysis",
+        "/images/media_gallery_5.jpg": "Team discussion during field visit",
+        "/images/field_work_soil_analysis_1.jpg": "Team collecting soil samples from rice field",
+        "/images/field_work_soil_analysis_2.jpg": "Researchers examining soil quality at the field edge",
+      },
+      ur: {
+        "/images/media_gallery_1.jpg": "چاول کے کھیتوں میں کام کرنے والے ٹیم کے ممبران",
+        "/images/media_gallery_2.jpg": "تجرباتی پلاٹس میں فصل کی نشوونما کا معائنہ",
+        "/images/media_gallery_3.jpg": "زرعی کانفرنس میں پریزنٹیشن",
+        "/images/media_gallery_4.jpg": "تجزیہ کے لیے فیلڈ سیمپل اکٹھا کرنا",
+        "/images/media_gallery_5.jpg": "فیلڈ کے دورے کے دوران ٹیم کی گفتگو",
+        "/images/field_work_soil_analysis_1.jpg": "ٹیم چاول کے کھیت سے مٹی کے نمونے اکٹھا کر رہی ہے",
+        "/images/field_work_soil_analysis_2.jpg": "محققین کھیت کے کنارے مٹی کی کوالٹی کا معائنہ کر رہے ہیں",
+      },
     }
+
+    return descriptions[language][imagePath] || ""
   }
 
-  useEffect(() => {
-    resetTimeout()
-
-    if (autoPlay) {
-      timeoutRef.current = setTimeout(() => {
-        setCurrentIndex((prevIndex) => (prevIndex === images.length - 1 ? 0 : prevIndex + 1))
-      }, interval)
-    }
-
-    return () => {
-      resetTimeout()
-    }
-  }, [currentIndex, images.length, autoPlay, interval])
-
-  const goToPrevious = () => {
-    resetTimeout()
-    setCurrentIndex((prevIndex) => (prevIndex === 0 ? images.length - 1 : prevIndex - 1))
+  const nextSlide = () => {
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length)
   }
 
-  const goToNext = () => {
-    resetTimeout()
-    setCurrentIndex((prevIndex) => (prevIndex === images.length - 1 ? 0 : prevIndex + 1))
+  const prevSlide = () => {
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length)
   }
 
   return (
-    <Card className="relative overflow-hidden rounded-xl">
-      {title && (
-        <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/70 to-transparent p-4">
-          <h3 className="text-white font-bold text-xl">{title}</h3>
-        </div>
-      )}
-
-      <div className="relative h-[300px] md:h-[400px] lg:h-[500px] w-full">
-        {images.map((image, index) => (
-          <div
-            key={index}
-            className="absolute top-0 left-0 w-full h-full transition-opacity duration-1000"
-            style={{
-              opacity: index === currentIndex ? 1 : 0,
-              zIndex: index === currentIndex ? 1 : 0,
-            }}
-          >
-            <Image
-              src={image || "/placeholder.svg"}
-              alt={`Gallery image ${index + 1}`}
-              fill
-              className="object-contain"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority={index === 0}
-            />
+    <div className="relative">
+      <div className="overflow-hidden rounded-lg aspect-video relative">
+        <div className="relative w-full h-full">
+          <Image
+            src={images[currentIndex] || "/placeholder.svg"}
+            alt={getImageDescription(images[currentIndex])}
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-center">
+            {getImageDescription(images[currentIndex])}
           </div>
-        ))}
+        </div>
       </div>
-
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white"
-        onClick={goToPrevious}
-      >
-        <ChevronLeft className="h-6 w-6" />
-        <span className="sr-only">Previous</span>
-      </Button>
-
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white"
-        onClick={goToNext}
-      >
-        <ChevronRight className="h-6 w-6" />
-        <span className="sr-only">Next</span>
-      </Button>
-
-      <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center gap-2">
-        {images.map((_, index) => (
-          <button
-            key={index}
-            className={`h-2 w-2 rounded-full ${index === currentIndex ? "bg-white" : "bg-white/50"}`}
-            onClick={() => {
-              resetTimeout()
-              setCurrentIndex(index)
-            }}
-          >
-            <span className="sr-only">Go to slide {index + 1}</span>
-          </button>
-        ))}
+      <div className="flex justify-between mt-4">
+        <Button variant="outline" size="icon" onClick={prevSlide} className="rounded-full" aria-label="Previous image">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="text-sm text-muted-foreground">
+          {currentIndex + 1} / {images.length}
+        </div>
+        <Button variant="outline" size="icon" onClick={nextSlide} className="rounded-full" aria-label="Next image">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
-    </Card>
+    </div>
   )
 }

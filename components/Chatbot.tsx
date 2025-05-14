@@ -2,16 +2,12 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
-import { useUser } from "@/contexts/UserContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Mic, Send, Volume2 } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
-import { v4 as uuidv4 } from "uuid"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Send, Loader2 } from "lucide-react"
 
 interface Message {
   role: "user" | "assistant"
@@ -19,477 +15,57 @@ interface Message {
 }
 
 export default function Chatbot() {
-  const { language, setLanguage } = useUser()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const [sessionId, setSessionId] = useState<string>("")
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
-  const [voicesLoaded, setVoicesLoaded] = useState(false)
-  const [speechError, setSpeechError] = useState<string | null>(null)
 
-  // Clean text for display - remove markdown and HTML tags
-  const cleanTextForDisplay = (text: string): string => {
-    // Replace markdown with proper formatting but preserve structure
-    return text
-      .replace(/\*\*(.*?)\*\*/g, "$1") // Remove ** but keep the content
-      .trim()
-  }
-
-  useEffect(() => {
-    // Generate a session ID if one doesn't exist
-    if (!sessionId) {
-      const newSessionId = uuidv4()
-      setSessionId(newSessionId)
-
-      // Store in localStorage for persistence
-      if (typeof window !== "undefined") {
-        localStorage.setItem("chatSessionId", newSessionId)
-      }
-    }
-
-    // Load session ID from localStorage if available
-    if (typeof window !== "undefined" && !sessionId) {
-      const storedSessionId = localStorage.getItem("chatSessionId")
-      if (storedSessionId) {
-        setSessionId(storedSessionId)
-      }
-    }
-  }, [sessionId])
-
-  useEffect(() => {
-    // Update welcome message when language changes
-    setMessages([
-      {
-        role: "assistant",
-        content:
-          language === "en"
-            ? "Hello! I'm your agricultural AI assistant. How can I help with your farming needs today?"
-            : "السلام علیکم! میں آپ کا زرعی اے آئی اسسٹنٹ ہوں۔ آج میں آپ کی کاشتکاری کی ضروریات میں کیسے مدد کر سکتا ہوں؟",
-      },
-    ])
-  }, [language])
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
-    }
-  }, [messages])
-
-  // Load and cache available voices
-  useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      return
-    }
-
-    // Function to update available voices
-    const updateVoices = () => {
-      const voices = window.speechSynthesis.getVoices()
-      setAvailableVoices(voices)
-      setVoicesLoaded(true)
-      console.log(
-        "Available voices:",
-        voices.map((v) => `${v.name} (${v.lang})`),
-      )
-    }
-
-    // Get initial voices
-    const voices = window.speechSynthesis.getVoices()
-    if (voices.length > 0) {
-      updateVoices()
-    }
-
-    // Set up event listener for when voices change
-    window.speechSynthesis.onvoiceschanged = updateVoices
-
-    // Clean up
-    return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.onvoiceschanged = null
-      }
-    }
-  }, [])
-
-  // Find the best voice for the current language
-  const getBestVoiceForLanguage = (lang: string): SpeechSynthesisVoice | null => {
-    if (!availableVoices.length) {
-      return null
-    }
-
-    // For Urdu, try to find Urdu voice first, then Hindi, then Arabic as fallbacks
-    if (lang === "ur") {
-      // Try Urdu first
-      const urduVoice = availableVoices.find(
-        (voice) => voice.lang.toLowerCase().includes("ur") || voice.name.toLowerCase().includes("urdu"),
-      )
-      if (urduVoice) {
-        console.log("Found Urdu voice:", urduVoice.name)
-        return urduVoice
-      }
-
-      // Try Hindi as fallback
-      const hindiVoice = availableVoices.find(
-        (voice) => voice.lang.toLowerCase().includes("hi") || voice.name.toLowerCase().includes("hindi"),
-      )
-      if (hindiVoice) {
-        console.log("Using Hindi voice as fallback:", hindiVoice.name)
-        return hindiVoice
-      }
-
-      // Try Arabic as fallback
-      const arabicVoice = availableVoices.find(
-        (voice) => voice.lang.toLowerCase().includes("ar") || voice.name.toLowerCase().includes("arab"),
-      )
-      if (arabicVoice) {
-        console.log("Using Arabic voice as fallback:", arabicVoice.name)
-        return arabicVoice
-      }
-
-      // Try any female voice as fallback (often better for Urdu)
-      const femaleVoice = availableVoices.find((voice) => voice.name.toLowerCase().includes("female"))
-      if (femaleVoice) {
-        console.log("Using female voice as fallback:", femaleVoice.name)
-        return femaleVoice
-      }
-
-      // If no appropriate voice found, use any voice
-      console.log("No appropriate voice found for Urdu, using default")
-      return availableVoices[0]
-    }
-
-    // For English
-    if (lang === "en") {
-      const englishVoice = availableVoices.find((voice) => voice.lang.toLowerCase().startsWith("en"))
-      if (englishVoice) {
-        console.log("Found English voice:", englishVoice.name)
-        return englishVoice
-      }
-      console.log("No English voice found, using default")
-      return availableVoices[0]
-    }
-
-    // Default fallback
-    return availableVoices[0]
-  }
-
-  // Improved browser TTS function with better error handling
-  const speakText = (text: string) => {
-    if (!text.trim() || typeof window === "undefined" || !("speechSynthesis" in window)) {
-      return
-    }
-
-    try {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel()
-      setIsSpeaking(true)
-      setSpeechError(null)
-
-      const utterance = new SpeechSynthesisUtterance(text)
-
-      // Set language based on current app language
-      utterance.lang = language === "en" ? "en-US" : "ur-PK"
-
-      // Get the best voice for the current language
-      const voice = getBestVoiceForLanguage(language)
-
-      if (voice) {
-        console.log(`Using voice: ${voice.name} (${voice.lang}) for ${language}`)
-        utterance.voice = voice
-      } else {
-        console.log(`No appropriate voice found for ${language}. Using default.`)
-      }
-
-      // Set up event handlers
-      utterance.onend = () => {
-        console.log("Speech ended")
-        setIsSpeaking(false)
-      }
-
-      utterance.onerror = (event) => {
-        console.error("Speech synthesis error:", event)
-        setIsSpeaking(false)
-        setSpeechError(
-          language === "en"
-            ? "An error occurred during speech synthesis."
-            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-        )
-        toast({
-          title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
-          description:
-            language === "en"
-              ? "An error occurred during speech synthesis."
-              : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-          variant: "destructive",
-        })
-      }
-
-      // Speak
-      window.speechSynthesis.speak(utterance)
-      console.log("Started speaking:", text.substring(0, 50) + "...")
-
-      // Safety timeout in case onend doesn't fire
-      setTimeout(
-        () => {
-          if (isSpeaking) {
-            console.log("Safety timeout triggered - resetting speaking state")
-            setIsSpeaking(false)
-          }
-        },
-        Math.max(15000, text.length * 100),
-      ) // Longer timeout for longer text
-    } catch (error) {
-      console.error("Browser TTS error:", error)
-      setIsSpeaking(false)
-      setSpeechError(
-        language === "en" ? "An error occurred during speech synthesis." : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-      )
-      toast({
-        title: language === "en" ? "Speech Error" : "تقریر میں خرابی",
-        description:
-          language === "en"
-            ? "An error occurred during speech synthesis."
-            : "تقریر کی تخلیق کے دوران ایک خرابی پیش آئی۔",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent, voiceInput = "") => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const userMessage = voiceInput || input
-    if (!userMessage.trim() || isLoading) return
+    if (!input.trim() || isLoading) return
 
-    const newUserMessage: Message = { role: "user", content: userMessage }
-    setMessages((prev) => [...prev, newUserMessage])
-    setInput("")
     setIsLoading(true)
+    setMessages((prev) => [...prev, { role: "user", content: input }])
+    setInput("")
 
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, newUserMessage],
-          language: language,
-          sessionId: sessionId,
-          maxLength: 4, // Request short responses (3-4 lines)
-        }),
-      })
-
-      if (!response.ok) throw new Error("Failed to get response")
-
-      const data = await response.json()
-
-      if (data.error) throw new Error(data.error)
-
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: data.text || "",
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
-
-      // Generate speech from the response
-      if (data.text) {
-        speakText(cleanTextForDisplay(data.text))
-      }
-    } catch (error) {
-      console.error("Chat error:", error)
-      const errorMessage =
-        language === "en"
-          ? "Sorry, something went wrong. Please try again."
-          : "معذرت، کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔"
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: errorMessage,
-        },
-      ])
-      toast({
-        title: language === "en" ? "Error" : "خرابی",
-        description: errorMessage,
-        variant: "destructive",
-      })
-    } finally {
+    // Simulate a response from the AI
+    setTimeout(() => {
+      const aiResponse = `This is a dummy response to your message: ${input}`
+      setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }])
       setIsLoading(false)
-    }
+    }, 1500)
   }
-
-  const handleVoiceInput = () => {
-    // Check if browser supports speech recognition
-    if (typeof window === "undefined") return
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-
-    if (!SpeechRecognition) {
-      toast({
-        title: language === "en" ? "Not Supported" : "سپورٹ نہیں ہے",
-        description:
-          language === "en"
-            ? "Speech recognition is not supported in your browser."
-            : "آپ کے براؤزر میں اسپیچ ریکگنیشن سپورٹ نہیں ہے۔",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      setIsRecording(true)
-      toast({
-        title: language === "en" ? "Listening..." : "سن رہا ہے...",
-        description: language === "en" ? "Speak now" : "اب بولیں",
-      })
-
-      const recognition = new SpeechRecognition()
-      recognition.lang = language === "en" ? "en-US" : "ur-PK"
-      recognition.continuous = false
-      recognition.interimResults = false
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript
-        setInput(transcript)
-        setIsRecording(false)
-
-        // Submit the form with the transcript
-        const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-        handleSubmit(fakeEvent, transcript)
-      }
-
-      recognition.onerror = (event) => {
-        console.error("Speech recognition error:", event.error)
-        setIsRecording(false)
-        toast({
-          title: language === "en" ? "Error" : "خرابی",
-          description:
-            language === "en"
-              ? "Failed to recognize speech. Please try again."
-              : "تقریر کو پہچاننے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
-          variant: "destructive",
-        })
-      }
-
-      recognition.onend = () => {
-        setIsRecording(false)
-      }
-
-      recognition.start()
-    } catch (error) {
-      console.error("Speech recognition error:", error)
-      setIsRecording(false)
-      toast({
-        title: language === "en" ? "Error" : "خرابی",
-        description:
-          language === "en"
-            ? "Failed to start speech recognition. Please try again."
-            : "اسپیچ ریکگنیشن شروع کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const placeholderText =
-    language === "en"
-      ? "Ask about crops, soil, weather, or farming practices..."
-      : "فصلوں، مٹی، موسم، یا کاشتکاری کے طریقوں کے بارے میں پوچھیں..."
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>{language === "en" ? "Mali Agent AI" : "مالی ایجنٹ اے آئی"}</CardTitle>
-        <Select
-          value={language}
-          onValueChange={(value: string) => {
-            if (typeof window !== "undefined") {
-              localStorage.setItem("language", value)
-              setLanguage(value as "en" | "ur")
-              window.location.reload()
-            }
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={language === "en" ? "Select Language" : "زبان منتخب کریں"} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="en">English</SelectItem>
-            <SelectItem value="ur">اردو</SelectItem>
-          </SelectContent>
-        </Select>
+        <CardTitle>AI Chatbot</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[400px] mb-4 p-4 border rounded-md" ref={scrollAreaRef}>
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`mb-4 p-3 rounded-lg ${
-                message.role === "user" ? "bg-green-100 ml-auto max-w-[80%]" : "bg-gray-100 mr-auto max-w-[80%]"
-              }`}
-            >
-              <p className="font-semibold mb-1">
-                {message.role === "user"
-                  ? language === "en"
-                    ? "You:"
-                    : "آپ:"
-                  : language === "en"
-                    ? "Mali Agent:"
-                    : "مالی ایجنٹ:"}
-              </p>
-              <div className="text-sm chat-message">{cleanTextForDisplay(message.content)}</div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-center">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          )}
+      <CardContent className="space-y-4">
+        <ScrollArea className="h-[300px]">
+          <div className="space-y-4">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-md ${
+                  message.role === "user" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {message.content}
+              </div>
+            ))}
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          </div>
         </ScrollArea>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={placeholderText}
-            disabled={isLoading || isRecording}
-            dir={language === "ur" ? "rtl" : "ltr"}
+            placeholder="Type your message here..."
+            disabled={isLoading}
           />
-          <Button type="submit" disabled={isLoading || isRecording} className="bg-green-600 hover:bg-green-700">
-            <Send className="h-4 w-4" />
-            <span className="sr-only">{language === "en" ? "Send" : "بھیجیں"}</span>
-          </Button>
-          <Button
-            type="button"
-            onClick={handleVoiceInput}
-            disabled={isLoading || isRecording}
-            variant="outline"
-            className={`border-green-600 text-green-600 hover:bg-green-50 ${isRecording ? "bg-red-50" : ""}`}
-          >
-            {isRecording ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
-            <span className="sr-only">{language === "en" ? "Voice input" : "آواز سے ان پٹ"}</span>
-          </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              if (messages.length > 0) {
-                const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant")
-                if (lastAssistantMessage) {
-                  speakText(cleanTextForDisplay(lastAssistantMessage.content))
-                  toast({
-                    title: language === "en" ? "Speaking..." : "بول رہا ہے...",
-                    description: language === "en" ? "The message is being spoken." : "پیغام بولا جا رہا ہے۔",
-                  })
-                }
-              }
-            }}
-            disabled={isLoading || isSpeaking || !voicesLoaded || !!speechError}
-            variant="outline"
-            className={`border-blue-600 text-blue-600 hover:bg-blue-50 ${isSpeaking ? "bg-blue-100" : ""}`}
-          >
-            {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
-            <span className="sr-only">{language === "en" ? "Text to speech" : "متن سے تقریر"}</span>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+            Send
           </Button>
         </form>
       </CardContent>
