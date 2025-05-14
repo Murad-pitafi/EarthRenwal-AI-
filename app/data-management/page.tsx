@@ -1,7 +1,17 @@
+"use client"
+
+import { useState } from "react"
 import { DataStorageManager } from "@/components/DataStorageManager"
 import { StorageRecommendations } from "@/components/StorageRecommendations"
 
 export default function DataManagementPage() {
+  const [isRealDataEnabled, setIsRealDataEnabled] = useState(false)
+
+  const handleToggleRealData = (enabled: boolean) => {
+    setIsRealDataEnabled(enabled)
+    // Additional logic for toggling real data can be added here
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <h1 className="text-3xl font-bold mb-6">Data Management</h1>
@@ -11,7 +21,7 @@ export default function DataManagementPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <DataStorageManager onToggleRealData={() => {}} isRealDataEnabled={false} />
+          <DataStorageManager onToggleRealData={handleToggleRealData} isRealDataEnabled={isRealDataEnabled} />
         </div>
 
         <div>
