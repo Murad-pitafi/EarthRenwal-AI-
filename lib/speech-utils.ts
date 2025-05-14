@@ -27,8 +27,14 @@ export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
 
       // Check if any Urdu voice is available
       urduSupported = voices.some(
-        (voice) => voice.lang.toLowerCase().includes("ur") || voice.name.toLowerCase().includes("urdu"),
+        (voice) =>
+          voice.lang.toLowerCase() === "ur" ||
+          voice.lang.toLowerCase() === "ur-pk" ||
+          voice.lang.toLowerCase() === "ur-in" ||
+          voice.name.toLowerCase().includes("urdu"),
       )
+
+      console.log(`Urdu voice supported by browser: ${urduSupported}`)
 
       resolve(voices)
       return
@@ -42,8 +48,14 @@ export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
 
       // Check if any Urdu voice is available
       urduSupported = newVoices.some(
-        (voice) => voice.lang.toLowerCase().includes("ur") || voice.name.toLowerCase().includes("urdu"),
+        (voice) =>
+          voice.lang.toLowerCase() === "ur" ||
+          voice.lang.toLowerCase() === "ur-pk" ||
+          voice.lang.toLowerCase() === "ur-in" ||
+          voice.name.toLowerCase().includes("urdu"),
       )
+
+      console.log(`Urdu voice supported by browser: ${urduSupported}`)
 
       window.speechSynthesis.removeEventListener("voiceschanged", voicesChangedHandler)
       resolve(newVoices)
@@ -65,9 +77,9 @@ export const findBestVoice = async (language: string): Promise<SpeechSynthesisVo
   console.log(`Available voices: ${voices.length}`)
   voices.forEach((v) => console.log(`Voice: ${v.name}, Lang: ${v.lang}, Default: ${v.default}`))
 
-  // For Urdu, try multiple possible language codes
+  // For Urdu, try exact matches only - no fallbacks to Hindi
   if (language === "ur") {
-    // Try exact Urdu matches first
+    // Try exact Urdu matches
     const urduVoice = voices.find(
       (voice) =>
         voice.lang.toLowerCase() === "ur" ||
@@ -81,32 +93,8 @@ export const findBestVoice = async (language: string): Promise<SpeechSynthesisVo
       return urduVoice
     }
 
-    // If no Urdu voice, try Hindi as a fallback (similar language region)
-    const hindiVoice = voices.find(
-      (voice) => voice.lang.toLowerCase().startsWith("hi") || voice.name.toLowerCase().includes("hindi"),
-    )
-
-    if (hindiVoice) {
-      console.log(`Using Hindi voice as fallback for Urdu: ${hindiVoice.name}`)
-      return hindiVoice
-    }
-
-    // If no Hindi voice either, try any South Asian voice
-    const southAsianVoice = voices.find(
-      (voice) =>
-        voice.lang
-          .toLowerCase()
-          .includes("in") || // Indian voices
-        voice.lang.toLowerCase().includes("pk"), // Pakistani voices
-    )
-
-    if (southAsianVoice) {
-      console.log(`Using South Asian voice as fallback: ${southAsianVoice.name}`)
-      return southAsianVoice
-    }
-
-    // For Urdu, we'll return null to trigger Google TTS fallback
-    console.log(`No suitable voice found for Urdu, will use Google TTS`)
+    // No fallbacks to Hindi - return null to trigger Google TTS
+    console.log(`No Urdu voice found, will use Google TTS`)
     return null
   }
 
@@ -126,9 +114,19 @@ export const speakText = async (text: string, language: string): Promise<void> =
   }
 
   try {
-    // For Urdu, if browser doesn't support it, use Google TTS API
-    if (language === "ur" && !urduSupported) {
-      return await speakWithGoogleTTS(text, "ur-PK")
+    // For Urdu, check if browser supports it
+    if (language === "ur") {
+      // First check if browser has Urdu voice
+      await getVoices() // Ensure voices are loaded
+
+      // If Urdu is not supported by browser, use Google TTS
+      if (!urduSupported) {
+        console.log("Browser does not support Urdu, using Google TTS")
+        return await speakWithGoogleTTS(text, "ur-PK")
+      }
+
+      // If we get here, browser has Urdu support, so try to use it
+      console.log("Browser supports Urdu, attempting to use browser TTS")
     }
 
     // Use browser TTS for English and other languages, or if Urdu is supported
@@ -143,10 +141,11 @@ export const speakText = async (text: string, language: string): Promise<void> =
       const voice = await findBestVoice(language)
       if (voice) {
         utterance.voice = voice
-        console.log(`Using voice: ${voice.name} (${voice.lang})`)
+        console.log(`Using browser voice: ${voice.name} (${voice.lang})`)
       } else {
         // If no voice found for Urdu, use Google TTS
         if (language === "ur") {
+          console.log("No suitable browser voice found for Urdu, using Google TTS")
           return await speakWithGoogleTTS(text, "ur-PK")
         }
         console.warn(`No voice found for language: ${language}`)
@@ -167,12 +166,20 @@ export const speakText = async (text: string, language: string): Promise<void> =
 
         utterance.onerror = (event) => {
           console.error("Speech synthesis error:", event)
-          reject(new Error("Speech synthesis failed"))
+
+          // If browser TTS fails for Urdu, try Google TTS
+          if (language === "ur") {
+            console.log("Browser TTS failed for Urdu, falling back to Google TTS")
+            speakWithGoogleTTS(text, "ur-PK").then(resolve).catch(reject)
+          } else {
+            reject(new Error("Speech synthesis failed"))
+          }
         }
       })
     } else {
       // If browser doesn't support speech synthesis at all, use Google TTS API only for Urdu
       if (language === "ur") {
+        console.log("Browser doesn't support speech synthesis, using Google TTS for Urdu")
         return await speakWithGoogleTTS(text, "ur-PK")
       } else {
         throw new Error("Speech synthesis not supported in this browser")
@@ -180,6 +187,16 @@ export const speakText = async (text: string, language: string): Promise<void> =
     }
   } catch (error) {
     console.error("Error in text-to-speech:", error)
+
+    // Final fallback for Urdu - if all else fails, try Google TTS
+    if (language === "ur") {
+      console.log("Error in browser TTS for Urdu, falling back to Google TTS")
+      return await speakWithGoogleTTS(text, "ur-PK").catch((e) => {
+        console.error("Google TTS also failed:", e)
+        throw e
+      })
+    }
+
     throw error
   }
 }
@@ -187,7 +204,7 @@ export const speakText = async (text: string, language: string): Promise<void> =
 // Function to use Google TTS API for speech (only for Urdu)
 export const speakWithGoogleTTS = async (text: string, languageCode: string): Promise<void> => {
   try {
-    console.log(`Using Google TTS API for ${languageCode} speech`)
+    console.log(`Using Google TTS API for ${languageCode} speech with ur-PK-Standard-A voice`)
 
     // Call our API endpoint
     const response = await fetch("/api/google-tts", {
@@ -202,8 +219,8 @@ export const speakWithGoogleTTS = async (text: string, languageCode: string): Pr
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to generate speech")
+      const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+      throw new Error(errorData.error || `Failed to generate speech: ${response.status}`)
     }
 
     const data = await response.json()
@@ -214,7 +231,24 @@ export const speakWithGoogleTTS = async (text: string, languageCode: string): Pr
 
     // Play the audio
     const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`)
-    audio.play()
+
+    // Add error handling for audio loading
+    audio.onerror = (e) => {
+      console.error("Error loading audio:", e)
+    }
+
+    // Start loading the audio
+    audio.load()
+
+    // Play when ready
+    const playPromise = audio.play()
+
+    // Handle play promise (required for some browsers)
+    if (playPromise !== undefined) {
+      playPromise.catch((error) => {
+        console.error("Audio playback failed:", error)
+      })
+    }
 
     return new Promise((resolve, reject) => {
       audio.onended = () => {

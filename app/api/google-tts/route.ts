@@ -25,12 +25,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "API key not configured" }, { status: 500 })
     }
 
+    console.log("Using Google TTS API for Urdu with ur-PK-Standard-A voice")
+
     // Prepare request for Google TTS API
     const requestData = {
       input: { text },
       voice: {
         languageCode: "ur-PK",
-        name: "ur-PK-Standard-A", // Use Standard voice to control costs
+        name: "ur-PK-Standard-A", // Using the specified Standard female voice
         ssmlGender: "FEMALE",
       },
       audioConfig: {
