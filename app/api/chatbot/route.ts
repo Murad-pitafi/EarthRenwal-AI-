@@ -70,7 +70,7 @@ For excessive nutrient levels:
     // Update the prompt to include sensor data and formatting instructions
     const systemPrompt = `You are Mali Agent, an AI assistant specializing in agriculture and soil science.
 Respond in ${language === "ur" ? "Urdu" : "English"} language.
-${language === "ur" ? "Keep your responses in Urdu brief and concise. Use simple language and short sentences." : ""}
+${language === "ur" ? "For Urdu responses, be moderately concise but ALWAYS include all important information, especially numbers, statistics, and specific recommendations. Use clear language and avoid unnecessary elaboration, but never omit critical details." : ""}
 
 ${sensorContext ? `Current Farm Sensor Data:\n${sensorContext}\n\nOverall Soil Health Assessment:\n${soilHealth}` : ""}
 
@@ -87,15 +87,17 @@ Be helpful, practical, and provide actionable advice based on the sensor data.`
     const prompt = `
 ${systemPrompt}
 
-IMPORTANT: Keep your responses VERY BRIEF - maximum 3-4 lines only.
-
-Focus on providing practical farming advice, crop management techniques, soil health recommendations,
-pest control strategies, and sustainable agricultural practices.
+IMPORTANT: For Urdu responses, be moderately concise but ALWAYS include all important information, especially:
+- Exact numbers and measurements
+- Statistical information
+- Specific recommendations with quantities
+- Critical thresholds and ranges
 
 Format your response with:
 - Clear, concise sentences
 - Use ** for important terms (like **crop rotation**)
-- No lengthy explanations
+- Include all numerical data and statistics
+- Provide specific, actionable recommendations
 
 If asked about weather, provide general agricultural implications rather than specific forecasts.
 If asked about soil conditions, reference the sensor data provided.

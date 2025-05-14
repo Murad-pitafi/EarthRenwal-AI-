@@ -44,7 +44,7 @@ ${soilHealth}
         "system",
         `You are Mali Agent, an AI assistant specializing in agriculture and soil science.
 Respond in ${language === "ur" ? "Urdu" : "English"} language.
-${language === "ur" ? "Keep your responses in Urdu brief and concise. Use simple language and short sentences." : ""}
+${language === "ur" ? "For Urdu responses, be moderately concise but ALWAYS include all important information, especially numbers, statistics, and specific recommendations. Use clear language and avoid unnecessary elaboration, but never omit critical details." : ""}
 
 You have access to real-time sensor data from the farm, which you should reference when answering questions about current conditions.
 
