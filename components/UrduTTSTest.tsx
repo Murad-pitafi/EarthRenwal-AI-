@@ -4,14 +4,14 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { speakText, isUrduSupported } from "@/lib/speech-utils"
+import { speakText, speakWithGoogleTTS } from "@/lib/speech-utils"
 import { Loader2, Volume2 } from "lucide-react"
 
 export default function UrduTTSTest() {
   const [urduText, setUrduText] = useState("السلام علیکم، میں آپ کی مدد کیسے کر سکتا ہوں؟")
   const [englishText, setEnglishText] = useState("Hello, how can I help you today?")
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const [urduSupported, setUrduSupported] = useState<boolean | null>(null)
+  const [apiKeyStatus, setApiKeyStatus] = useState<"checking" | "configured" | "missing" | "error">("checking")
   const [logs, setLogs] = useState<string[]>([])
 
   // Add a log function
@@ -21,19 +21,27 @@ export default function UrduTTSTest() {
   }
 
   useEffect(() => {
-    // Check if Urdu is supported
-    const checkUrduSupport = async () => {
+    // Check if API key is configured
+    const checkApiKey = async () => {
       try {
-        addLog("Checking Urdu speech support...")
-        const supported = await isUrduSupported()
-        setUrduSupported(supported)
-        addLog(`Urdu speech supported by browser: ${supported}`)
+        addLog("Checking Google API key configuration...")
+        const response = await fetch("/api/test-google-api")
+        const data = await response.json()
+
+        if (data.success) {
+          setApiKeyStatus("configured")
+          addLog(`API key is configured. Length: ${data.keyInfo.length}, Masked: ${data.keyInfo.maskedKey}`)
+        } else {
+          setApiKeyStatus("missing")
+          addLog(`API key error: ${data.error}`)
+        }
       } catch (error) {
-        addLog(`Error checking Urdu support: ${error.message}`)
+        setApiKeyStatus("error")
+        addLog(`Error checking API key: ${error.message}`)
       }
     }
 
-    checkUrduSupport()
+    checkApiKey()
   }, [])
 
   const handleSpeakUrdu = async () => {
@@ -94,6 +102,49 @@ export default function UrduTTSTest() {
     }
   }
 
+  const handleForceGoogleTTS = async () => {
+    if (!urduText.trim() || isSpeaking) return
+
+    setIsSpeaking(true)
+    addLog("Forcing Google TTS API for Urdu...")
+
+    try {
+      // Override console.log to capture logs
+      const originalConsoleLog = console.log
+      const originalConsoleError = console.error
+
+      console.log = (message, ...args) => {
+        originalConsoleLog(message, ...args)
+        if (typeof message === "string") {
+          addLog(message)
+        } else {
+          addLog(String(message))
+        }
+      }
+
+      console.error = (message, ...args) => {
+        originalConsoleError(message, ...args)
+        if (typeof message === "string") {
+          addLog(`ERROR: ${message}`)
+        } else {
+          addLog(`ERROR: ${String(message)}`)
+        }
+      }
+
+      // Directly call Google TTS
+      await speakWithGoogleTTS(urduText, "ur-PK")
+      addLog("Google TTS completed")
+
+      // Restore console functions
+      console.log = originalConsoleLog
+      console.error = originalConsoleError
+    } catch (error) {
+      addLog(`Google TTS error: ${error.message}`)
+    } finally {
+      setIsSpeaking(false)
+    }
+  }
+
   const handleTestGoogleTTSDirectly = async () => {
     if (isSpeaking) return
 
@@ -115,7 +166,13 @@ export default function UrduTTSTest() {
       addLog(`API Response status: ${response.status}`)
 
       if (!response.ok) {
-        const errorText = await response.text()
+        let errorText
+        try {
+          const errorData = await response.json()
+          errorText = JSON.stringify(errorData)
+        } catch (e) {
+          errorText = await response.text()
+        }
         addLog(`API Error: ${errorText}`)
         throw new Error(`API error: ${response.status} - ${errorText}`)
       }
@@ -167,7 +224,14 @@ export default function UrduTTSTest() {
       <CardContent className="space-y-6">
         <div>
           <p className="mb-2 font-medium">
-            Browser Urdu Support: {urduSupported === null ? "Checking..." : urduSupported ? "Yes" : "No"}
+            Google API Key:{" "}
+            {apiKeyStatus === "checking"
+              ? "Checking..."
+              : apiKeyStatus === "configured"
+                ? "✅ Configured"
+                : apiKeyStatus === "missing"
+                  ? "❌ Missing"
+                  : "⚠️ Error checking"}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -190,14 +254,25 @@ export default function UrduTTSTest() {
             </div>
           </div>
 
-          <Button
-            onClick={handleTestGoogleTTSDirectly}
-            disabled={isSpeaking}
-            className="w-full mt-4 bg-amber-600 hover:bg-amber-700"
-          >
-            {isSpeaking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Volume2 className="h-4 w-4 mr-2" />}
-            Test Google TTS API Directly
-          </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <Button
+              onClick={handleForceGoogleTTS}
+              disabled={isSpeaking}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              {isSpeaking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Volume2 className="h-4 w-4 mr-2" />}
+              Force Google TTS for Urdu
+            </Button>
+
+            <Button
+              onClick={handleTestGoogleTTSDirectly}
+              disabled={isSpeaking}
+              className="w-full bg-amber-600 hover:bg-amber-700"
+            >
+              {isSpeaking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Volume2 className="h-4 w-4 mr-2" />}
+              Test Google TTS API Directly
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-2">

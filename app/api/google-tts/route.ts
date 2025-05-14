@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "API key not configured" }, { status: 500 })
     }
 
+    console.log(`API Key found (first 4 chars): ${apiKey.substring(0, 4)}...`)
     console.log("Using Google TTS API for Urdu with ur-PK-Standard-A voice")
 
     // Prepare request for Google TTS API
@@ -49,11 +50,15 @@ export async function POST(req: Request) {
     }
 
     console.log("Sending request to Google TTS API...")
+    console.log(`Request URL: ${GOOGLE_TTS_API}?key=[REDACTED]`)
+    console.log(`Request data: ${JSON.stringify(requestData)}`)
 
     // Call Google TTS API
     const response = await axios.post(`${GOOGLE_TTS_API}?key=${apiKey}`, requestData)
 
     console.log("Google TTS API response received")
+    console.log(`Response status: ${response.status}`)
+    console.log(`Response headers: ${JSON.stringify(response.headers)}`)
 
     if (!response.data) {
       console.error("TTS Error: Empty response from Google TTS API")
@@ -82,10 +87,16 @@ export async function POST(req: Request) {
         data: error.response.data,
         headers: error.response.headers,
       })
+    } else if (error.request) {
+      console.error("TTS Error Request:", error.request)
     }
 
     return NextResponse.json(
-      { error: "Failed to generate speech", details: error.message || "Unknown error" },
+      {
+        error: "Failed to generate speech",
+        details: error.message || "Unknown error",
+        stack: error.stack,
+      },
       { status: error.response?.status || 500 },
     )
   }

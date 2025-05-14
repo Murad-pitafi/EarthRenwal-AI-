@@ -12,7 +12,7 @@ import { Loader2, Mic, Send, Volume2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { v4 as uuidv4 } from "uuid"
-import { speakText, isUrduSupported } from "@/lib/speech-utils"
+import { speakText } from "@/lib/speech-utils"
 
 interface Message {
   role: "user" | "assistant"
@@ -28,7 +28,6 @@ export default function Chatbot() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [sessionId, setSessionId] = useState<string>("")
-  const [urduSpeechSupported, setUrduSpeechSupported] = useState<boolean | null>(null)
 
   // Clean text for display - remove markdown and HTML tags
   const cleanTextForDisplay = (text: string): string => {
@@ -39,15 +38,6 @@ export default function Chatbot() {
   }
 
   useEffect(() => {
-    // Check if Urdu speech is supported
-    const checkUrduSupport = async () => {
-      const supported = await isUrduSupported()
-      setUrduSpeechSupported(supported)
-      console.log(`Urdu speech supported: ${supported}`)
-    }
-
-    checkUrduSupport()
-
     // Generate a session ID if one doesn't exist
     if (!sessionId) {
       const newSessionId = uuidv4()
@@ -94,6 +84,7 @@ export default function Chatbot() {
 
     try {
       setIsSpeaking(true)
+      console.log(`Speaking text in ${language}: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`)
 
       // Use our speech utility that handles fallback to Google TTS
       await speakText(cleanTextForDisplay(text), language)
@@ -304,11 +295,11 @@ export default function Chatbot() {
           )}
         </ScrollArea>
 
-        {language === "ur" && urduSpeechSupported === false && (
-          <div className="mb-4 p-2 bg-amber-50 border border-amber-200 rounded text-sm">
+        {language === "ur" && (
+          <div className="mb-4 p-2 bg-green-50 border border-green-200 rounded text-sm">
             {language === "en"
-              ? "Urdu speech is not natively supported by your browser. Using Google TTS API instead."
-              : "آپ کے براؤزر میں اردو تقریر کی مقامی سپورٹ نہیں ہے۔ اس کے بجائے گوگل ٹی ٹی ایس اے پی آئی استعمال کی جا رہی ہے۔"}
+              ? "Using Google Cloud TTS for Urdu speech."
+              : "اردو تقریر کے لیے گوگل کلاؤڈ ٹی ٹی ایس استعمال کر رہے ہیں۔"}
           </div>
         )}
 
