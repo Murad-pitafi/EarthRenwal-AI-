@@ -9,12 +9,14 @@ let urduSupported = false
 export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
   return new Promise((resolve) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      console.log("Speech synthesis not available")
       resolve([])
       return
     }
 
     // If voices are already loaded, return them
     if (voicesLoaded && availableVoices.length > 0) {
+      console.log(`Returning cached voices (${availableVoices.length})`)
       resolve(availableVoices)
       return
     }
@@ -34,13 +36,13 @@ export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
           voice.name.toLowerCase().includes("urdu"),
       )
 
-      console.log(`Urdu voice supported by browser: ${urduSupported}`)
-
+      console.log(`Loaded ${voices.length} voices, Urdu supported: ${urduSupported}`)
       resolve(voices)
       return
     }
 
     // If voices aren't loaded yet, wait for the voiceschanged event
+    console.log("Waiting for voices to load...")
     const voicesChangedHandler = () => {
       const newVoices = window.speechSynthesis.getVoices()
       availableVoices = newVoices
@@ -55,8 +57,7 @@ export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
           voice.name.toLowerCase().includes("urdu"),
       )
 
-      console.log(`Urdu voice supported by browser: ${urduSupported}`)
-
+      console.log(`Voices changed event: ${newVoices.length} voices, Urdu supported: ${urduSupported}`)
       window.speechSynthesis.removeEventListener("voiceschanged", voicesChangedHandler)
       resolve(newVoices)
     }
@@ -68,12 +69,14 @@ export const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
 // Function to find the best voice for a language
 export const findBestVoice = async (language: string): Promise<SpeechSynthesisVoice | null> => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    console.log("Speech synthesis not available")
     return null
   }
 
   const voices = await getVoices()
 
   // Debug available voices
+  console.log(`Finding voice for language: ${language}`)
   console.log(`Available voices: ${voices.length}`)
   voices.forEach((v) => console.log(`Voice: ${v.name}, Lang: ${v.lang}, Default: ${v.default}`))
 
@@ -100,14 +103,21 @@ export const findBestVoice = async (language: string): Promise<SpeechSynthesisVo
 
   // For English or other languages
   const exactMatch = voices.find((voice) => voice.lang.toLowerCase().startsWith(language.toLowerCase()))
-  if (exactMatch) return exactMatch
+  if (exactMatch) {
+    console.log(`Found exact match for ${language}: ${exactMatch.name}`)
+    return exactMatch
+  }
 
   // Default to first voice or null if none available
-  return voices.find((voice) => voice.default) || voices[0] || null
+  const defaultVoice = voices.find((voice) => voice.default) || voices[0] || null
+  console.log(`Using default voice: ${defaultVoice?.name || "none"}`)
+  return defaultVoice
 }
 
 // Function to speak text with the appropriate voice
 export const speakText = async (text: string, language: string): Promise<void> => {
+  console.log(`Speaking text in ${language}: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`)
+
   if (typeof window === "undefined") {
     console.error("Window not available")
     return
@@ -156,16 +166,17 @@ export const speakText = async (text: string, language: string): Promise<void> =
       utterance.pitch = 1.0
 
       // Speak the text
+      console.log("Starting browser speech synthesis...")
       window.speechSynthesis.speak(utterance)
 
       return new Promise((resolve, reject) => {
         utterance.onend = () => {
-          console.log("Speech completed successfully")
+          console.log("Browser speech completed successfully")
           resolve()
         }
 
         utterance.onerror = (event) => {
-          console.error("Speech synthesis error:", event)
+          console.error("Browser speech synthesis error:", event)
 
           // If browser TTS fails for Urdu, try Google TTS
           if (language === "ur") {
@@ -203,10 +214,12 @@ export const speakText = async (text: string, language: string): Promise<void> =
 
 // Function to use Google TTS API for speech (only for Urdu)
 export const speakWithGoogleTTS = async (text: string, languageCode: string): Promise<void> => {
-  try {
-    console.log(`Using Google TTS API for ${languageCode} speech with ur-PK-Standard-A voice`)
+  console.log(`Using Google TTS API for ${languageCode} speech with ur-PK-Standard-A voice`)
+  console.log(`Text to speak: "${text.substring(0, 50)}${text.length > 50 ? "..." : ""}"`)
 
+  try {
     // Call our API endpoint
+    console.log("Sending request to /api/google-tts...")
     const response = await fetch("/api/google-tts", {
       method: "POST",
       headers: {
@@ -218,36 +231,85 @@ export const speakWithGoogleTTS = async (text: string, languageCode: string): Pr
       }),
     })
 
+    console.log(`Response status: ${response.status}`)
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-      throw new Error(errorData.error || `Failed to generate speech: ${response.status}`)
+      let errorMessage = "Unknown error"
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.error || errorData.details || `HTTP error ${response.status}`
+        console.error("TTS API error response:", errorData)
+      } catch (e) {
+        console.error("Failed to parse error response:", e)
+      }
+      throw new Error(`Failed to generate speech: ${errorMessage}`)
     }
 
-    const data = await response.json()
+    let data
+    try {
+      data = await response.json()
+      console.log("TTS API response received:", data.success ? "Success" : "Failed")
+    } catch (e) {
+      console.error("Failed to parse JSON response:", e)
+      throw new Error("Invalid JSON response from TTS API")
+    }
 
     if (!data.success || !data.audioContent) {
-      throw new Error("Invalid response from TTS API")
+      console.error("Invalid TTS API response:", data)
+      throw new Error("Invalid response from TTS API: No audio content")
     }
 
-    // Play the audio
-    const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`)
+    console.log(`Audio content received, length: ${data.audioContent.length}`)
+
+    // Create audio element
+    const audio = new Audio()
+
+    // Add event listeners for debugging
+    audio.addEventListener("loadstart", () => console.log("Audio loading started"))
+    audio.addEventListener("loadeddata", () => console.log("Audio data loaded"))
+    audio.addEventListener("canplay", () => console.log("Audio can play"))
+    audio.addEventListener("playing", () => console.log("Audio playback started"))
 
     // Add error handling for audio loading
     audio.onerror = (e) => {
       console.error("Error loading audio:", e)
+      console.error("Audio error details:", {
+        code: audio.error?.code,
+        message: audio.error?.message,
+      })
     }
 
+    // Set the audio source
+    const audioSrc = `data:audio/mp3;base64,${data.audioContent}`
+    console.log(`Setting audio source (first 50 chars): ${audioSrc.substring(0, 50)}...`)
+    audio.src = audioSrc
+
     // Start loading the audio
+    console.log("Loading audio...")
     audio.load()
 
     // Play when ready
+    console.log("Attempting to play audio...")
     const playPromise = audio.play()
 
     // Handle play promise (required for some browsers)
     if (playPromise !== undefined) {
-      playPromise.catch((error) => {
-        console.error("Audio playback failed:", error)
-      })
+      playPromise
+        .then(() => {
+          console.log("Audio playback started successfully")
+        })
+        .catch((error) => {
+          console.error("Audio playback failed:", error)
+          // Try an alternative approach
+          console.log("Trying alternative playback approach...")
+          setTimeout(() => {
+            try {
+              audio.play().catch((e) => console.error("Alternative playback also failed:", e))
+            } catch (e) {
+              console.error("Alternative playback error:", e)
+            }
+          }, 1000)
+        })
     }
 
     return new Promise((resolve, reject) => {
@@ -260,6 +322,12 @@ export const speakWithGoogleTTS = async (text: string, languageCode: string): Pr
         console.error("Audio playback error:", error)
         reject(new Error("Audio playback failed"))
       }
+
+      // Safety timeout in case onended doesn't fire
+      setTimeout(() => {
+        console.log("Safety timeout reached - resolving promise")
+        resolve()
+      }, 10000) // 10 second timeout
     })
   } catch (error) {
     console.error("Google TTS error:", error)
