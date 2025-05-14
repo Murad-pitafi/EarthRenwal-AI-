@@ -1,89 +1,153 @@
 import { NextResponse } from "next/server"
+import { exec } from "child_process"
+import { promisify } from "util"
+import path from "path"
+import fs from "fs"
+
+const execPromise = promisify(exec)
 
 interface SoilData {
-  nitrogen: number // percentage (%)
-  phosphorous: number // parts per million (ppm)
-  potassium: number // parts per million (ppm)
-  ph?: number // pH value
-}
-
-function predictSoilQuality(data: SoilData): {
-  quality: string
-  recommendations: string[]
-} {
-  // Pakistani soil-specific constraints
-  const nitrogenRange = { min: 0.15, max: 0.25 } // %
-  const phosphorousRange = { min: 10, max: 20 } // ppm
-  const potassiumRange = { min: 100, max: 200 } // ppm
-  const optimalPh = { min: 7.7, max: 7.8 } // typical Pakistani alkaline soils
-
-  // Check each nutrient level
-  const nitrogenStatus =
-    data.nitrogen < nitrogenRange.min ? "low" : data.nitrogen > nitrogenRange.max ? "high" : "optimal"
-
-  const phosphorousStatus =
-    data.phosphorous < phosphorousRange.min ? "low" : data.phosphorous > phosphorousRange.max ? "high" : "optimal"
-
-  const potassiumStatus =
-    data.potassium < potassiumRange.min ? "low" : data.potassium > potassiumRange.max ? "high" : "optimal"
-
-  // Check pH if provided
-  const phStatus = !data.ph ? "unknown" : data.ph < optimalPh.min ? "low" : data.ph > optimalPh.max ? "high" : "optimal"
-
-  // Count optimal parameters
-  const optimalCount = [nitrogenStatus, phosphorousStatus, potassiumStatus, phStatus].filter(
-    (status) => status === "optimal",
-  ).length
-
-  // Generate quality assessment
-  let quality = "Poor"
-  if (optimalCount >= 3) {
-    quality = "Good"
-  } else if (optimalCount >= 1) {
-    quality = "Moderate"
-  }
-
-  // Generate recommendations
-  const recommendations: string[] = []
-
-  if (nitrogenStatus === "low") {
-    recommendations.push("Increase nitrogen through urea application or organic manures like farmyard manure")
-  } else if (nitrogenStatus === "high") {
-    recommendations.push("Reduce nitrogen application in next growing season")
-  }
-
-  if (phosphorousStatus === "low") {
-    recommendations.push("Apply phosphate fertilizers like DAP or SSP to improve phosphorous levels")
-  } else if (phosphorousStatus === "high") {
-    recommendations.push("Limit phosphorous application in upcoming seasons")
-  }
-
-  if (potassiumStatus === "low") {
-    recommendations.push("Apply potash fertilizers like SOP or MOP to increase potassium levels")
-  } else if (potassiumStatus === "high") {
-    recommendations.push("Reduce potassium application in next growing season")
-  }
-
-  if (phStatus === "low") {
-    recommendations.push("Apply agricultural lime to neutralize soil acidity")
-  } else if (phStatus === "high") {
-    recommendations.push("Apply gypsum or organic matter to help reduce alkalinity")
-  }
-
-  return { quality, recommendations }
+  gas_level: number
+  humidity: number
+  nitrogen: number
+  phosphorus: number
+  potassium: number
+  temperature: number
 }
 
 export async function POST(req: Request) {
   try {
+    // Parse request body
     const data: SoilData = await req.json()
-    const prediction = predictSoilQuality(data)
 
+    // Validate input data
+    const requiredFields = ["gas_level", "humidity", "nitrogen", "phosphorus", "potassium", "temperature"]
+    for (const field of requiredFields) {
+      if (typeof data[field as keyof SoilData] !== "number") {
+        return NextResponse.json({ error: `Invalid input data. ${field} must be a number.` }, { status: 400 })
+      }
+    }
+
+    // Check if model file exists in any of the possible locations
+    const possibleModelPaths = [
+      path.join(process.cwd(), "models", "soil_quality_model.pkl"),
+      path.join(process.cwd(), "scripts", "soil_quality_model.pkl"),
+      path.join(process.cwd(), "soil_quality_model.pkl"),
+    ]
+
+    let modelExists = false
+    let modelPath = ""
+
+    for (const path of possibleModelPaths) {
+      try {
+        if (fs.existsSync(path)) {
+          modelExists = true
+          modelPath = path
+          console.log(`Found model at: ${path}`)
+          break
+        }
+      } catch (error) {
+        console.error(`Error checking model at ${path}:`, error)
+      }
+    }
+
+    if (!modelExists) {
+      console.error("Model file not found in any of the expected locations")
+      return NextResponse.json({
+        prediction: "Moderate",
+        recommendations: [
+          "Model file not found. Please upload the soil_quality_model.pkl file.",
+          "Using fallback prediction until model is available.",
+        ],
+      })
+    }
+
+    // Pass the data directly as a JSON string to avoid environment variable issues
+    const scriptPath = path.join(process.cwd(), "scripts", "soil_model.py")
+    const jsonData = JSON.stringify(data)
+
+    // Escape single quotes in the JSON string to prevent command injection
+    const escapedJsonData = jsonData.replace(/'/g, "'\\''")
+
+    const command = `python ${scriptPath} '${escapedJsonData}'`
+
+    console.log(`Executing command: ${command}`)
+
+    // Execute the Python script
+    const { stdout, stderr } = await execPromise(command)
+
+    if (stderr) {
+      console.error(`Error from Python script: ${stderr}`)
+    }
+
+    // Parse the output
+    let result
+    try {
+      result = JSON.parse(stdout)
+    } catch (e) {
+      console.error("Error parsing Python output:", stdout)
+      return NextResponse.json({
+        prediction: "Moderate",
+        recommendations: ["Error processing soil data. Using fallback prediction."],
+      })
+    }
+
+    // Check for errors
+    if (result.error) {
+      console.error("Model prediction error:", result.error)
+
+      // Return a simple response with just the prediction
+      return NextResponse.json({
+        prediction: result.prediction,
+        recommendations: ["Based on available data. Consider regular soil testing."],
+      })
+    }
+
+    // Generate simple recommendations based on the prediction
+    const recommendations = getRecommendations(result.prediction)
+
+    // Return the prediction with recommendations
     return NextResponse.json({
-      prediction: prediction.quality,
-      recommendations: prediction.recommendations,
+      prediction: result.prediction,
+      recommendations,
     })
   } catch (error) {
-    console.error("Error in soil prediction:", error)
-    return NextResponse.json({ error: "Soil prediction failed" }, { status: 500 })
+    console.error("Error in soil model prediction:", error)
+
+    // Return a fallback prediction in case of any error
+    return NextResponse.json({
+      prediction: "Moderate",
+      recommendations: [
+        "Error processing prediction. Using fallback prediction.",
+        "Consider regular soil testing for more accurate results.",
+      ],
+    })
+  }
+}
+
+// Simple function to generate recommendations based on prediction
+function getRecommendations(prediction: string): string[] {
+  switch (prediction) {
+    case "Good":
+      return [
+        "Soil quality is good. Maintain current practices.",
+        "Continue regular monitoring of soil nutrients.",
+        "Apply balanced fertilization to maintain soil health.",
+      ]
+    case "Moderate":
+      return [
+        "Soil quality is moderate. Some improvements needed.",
+        "Consider soil testing to identify specific deficiencies.",
+        "Adjust fertilization based on crop requirements.",
+      ]
+    case "Poor":
+      return [
+        "Soil quality is poor. Immediate action recommended.",
+        "Conduct comprehensive soil testing.",
+        "Consider adding organic matter to improve soil structure.",
+        "Implement a targeted fertilization plan based on deficiencies.",
+      ]
+    default:
+      return ["Continue regular soil monitoring.", "Maintain balanced fertilization practices."]
   }
 }

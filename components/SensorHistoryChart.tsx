@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useUser } from "@/contexts/UserContext"
+import { useSensorData, type ConsolidatedReading } from "@/contexts/SensorDataContext"
 import { Line } from "react-chartjs-2"
 import {
   Chart as ChartJS,
@@ -20,11 +21,6 @@ import {
 // Register ChartJS components including the Filler plugin
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
-interface HistoryDataPoint {
-  value: number
-  timestamp: string
-}
-
 interface SensorHistoryChartProps {
   sensorId: string
   sensorName: string
@@ -34,87 +30,113 @@ interface SensorHistoryChartProps {
   type: "soil" | "environment" | "other"
 }
 
+interface ChartData {
+  timestamp: Date
+  value: number
+}
+
 export function SensorHistoryChart({ sensorId, sensorName, variableId, unit, color, type }: SensorHistoryChartProps) {
   const { language } = useUser()
+  const { readings } = useSensorData()
   const isUrdu = language === "ur"
-  const [historyData, setHistoryData] = useState<HistoryDataPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState<ChartData[]>([])
 
-  // Generate mock historical data for now
-  // In a real implementation, this would fetch from an API endpoint
+  // Process readings into chart data
   useEffect(() => {
-    const generateMockData = () => {
-      const now = new Date()
-      const data: HistoryDataPoint[] = []
-
-      // Generate data points for the last 24 hours (one per hour)
-      for (let i = 24; i >= 0; i--) {
-        const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000).toISOString()
-
-        // Base value depends on the variable type
-        let baseValue = 0
-        switch (variableId) {
-          case "dist":
-            baseValue = 65
-            break
-          case "gas":
-            baseValue = 770
-            break
-          case "humd":
-            baseValue = 71
-            break
-          case "nit":
-            baseValue = 15
-            break
-          case "phos":
-            baseValue = 10
-            break
-          case "pot":
-            baseValue = 20
-            break
-          case "temp":
-            baseValue = 31
-            break
-          default:
-            baseValue = 50
-        }
-
-        // Add some random variation
-        const randomVariation = (Math.random() - 0.5) * 20
-        const value = Math.max(0, baseValue + randomVariation)
-
-        data.push({ value, timestamp })
-      }
-
-      return data
-    }
-
-    setLoading(true)
     try {
-      // In a real implementation, this would be an API call
-      // For now, we'll use mock data
-      const data = generateMockData()
-      setHistoryData(data)
-      setError(null)
-    } catch (err) {
-      setError("Failed to load historical data")
-      console.error(err)
+      setLoading(true)
+
+      if (readings.length > 0) {
+        // Extract data for this specific sensor from consolidated readings
+        const chartData = readings
+          .filter((reading) => reading[variableId as keyof ConsolidatedReading] !== undefined)
+          .map((reading) => ({
+            timestamp: new Date(reading.timestamp),
+            value: reading[variableId as keyof ConsolidatedReading] as number,
+          }))
+          .filter((item) => item.value !== null && item.value !== undefined)
+
+        // Sort by timestamp (oldest first for charts)
+        chartData.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+        if (chartData.length > 0) {
+          setData(chartData)
+        } else {
+          // If no data for this sensor, generate mock data
+          generateMockData()
+        }
+      } else {
+        // If no readings, generate mock data
+        generateMockData()
+      }
+    } catch (error) {
+      console.error("Error processing sensor data for chart:", error)
+      // If error, generate mock data
+      generateMockData()
     } finally {
       setLoading(false)
     }
-  }, [variableId])
+  }, [readings, variableId])
+
+  // Generate mock historical data if needed
+  const generateMockData = () => {
+    const now = new Date()
+    const mockData: ChartData[] = []
+
+    // Generate data points for the last 24 hours (one per hour)
+    for (let i = 24; i >= 0; i--) {
+      const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000)
+
+      // Base value depends on the variable type
+      let baseValue = 0
+      switch (variableId) {
+        case "dist":
+          baseValue = 65
+          break
+        case "gas":
+          baseValue = 770
+          break
+        case "humd":
+          baseValue = 71
+          break
+        case "nit":
+          baseValue = 15
+          break
+        case "phos":
+          baseValue = 10
+          break
+        case "pot":
+          baseValue = 20
+          break
+        case "temp":
+          baseValue = 31
+          break
+        default:
+          baseValue = 50
+      }
+
+      // Add some random variation
+      const randomVariation = (Math.random() - 0.5) * 20
+      const value = Math.max(0, baseValue + randomVariation)
+
+      mockData.push({ timestamp, value })
+    }
+
+    setData(mockData)
+  }
 
   // Format data for Chart.js
   const chartData = {
-    labels: historyData.map((point) => {
+    labels: data.map((point) => {
       const date = new Date(point.timestamp)
       return `${date.getHours()}:${date.getMinutes().toString().padStart(2, "0")}`
     }),
     datasets: [
       {
         label: sensorName,
-        data: historyData.map((point) => point.value),
+        data: data.map((point) => point.value),
         borderColor: color,
         backgroundColor: `${color}33`, // Add transparency
         tension: 0.4,

@@ -1,9 +1,9 @@
-import { RealTimeMonitoring } from "@/components/RealTimeMonitoring"
+import { EnhancedDashboard } from "@/components/EnhancedDashboard"
 
 export default function RealTimeMonitoringPage() {
   return (
-    <div className="container mx-auto py-8">
-      <RealTimeMonitoring />
+    <div className="container mx-auto py-6">
+      <EnhancedDashboard />
     </div>
   )
 }

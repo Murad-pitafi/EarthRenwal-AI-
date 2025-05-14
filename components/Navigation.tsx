@@ -18,6 +18,8 @@ import {
   ChevronDown,
   Volume2,
   Activity,
+  Database,
+  FlaskRound,
 } from "lucide-react"
 import Image from "next/image"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -42,6 +44,9 @@ export function Navigation() {
       precisionFarming: "Precision Farming",
       soilMonitoring: "Soil Monitoring",
       collaborations: "Collaborations",
+      realTimeMonitoring: "Real-time Monitoring",
+      dataManagement: "Data Management",
+      soilTest: "Soil Test",
     },
     ur: {
       home: "ہوم",
@@ -56,6 +61,9 @@ export function Navigation() {
       precisionFarming: "درست کاشتکاری",
       soilMonitoring: "مٹی کی نگرانی",
       collaborations: "شراکت داریاں",
+      realTimeMonitoring: "ریئل ٹائم مانیٹرنگ",
+      dataManagement: "ڈیٹا مینجمنٹ",
+      soilTest: "مٹی کا ٹیسٹ",
     },
   }
 
@@ -73,9 +81,19 @@ export function Navigation() {
       icon: MessageSquare,
     },
     {
-      href: "/collaborations",
-      label: t.collaborations,
-      icon: Award,
+      href: "/real-time-monitoring",
+      label: t.realTimeMonitoring,
+      icon: Activity,
+    },
+    {
+      href: "/data-management",
+      label: t.dataManagement,
+      icon: Database,
+    },
+    {
+      href: "/soil-test",
+      label: t.soilTest,
+      icon: FlaskRound,
     },
     {
       href: "/weather",
@@ -86,14 +104,6 @@ export function Navigation() {
       href: "/contact",
       label: t.contact,
       icon: Phone,
-    },
-    {
-      href: "/real-time-monitoring",
-      label: {
-        en: "Real-time Monitoring",
-        ur: "ریئل ٹائم مانیٹرنگ",
-      }[language],
-      icon: Activity,
     },
   ]
 

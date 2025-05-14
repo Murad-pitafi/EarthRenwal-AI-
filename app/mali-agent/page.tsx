@@ -2,23 +2,40 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Mic, Send, Volume2 } from "lucide-react"
+import { Loader2, Mic, Send, Volume2, Gauge } from "lucide-react"
 import Image from "next/image"
 import { useUser } from "@/contexts/UserContext"
+import { useSensorData } from "@/contexts/SensorDataContext"
 import { toast } from "@/components/ui/use-toast"
+import { formatSensorDataForContext, getSoilHealthAssessment } from "@/lib/sensor-utils"
 
 interface Message {
   role: "user" | "assistant"
   content: string
 }
 
+interface ArduinoSensorReading {
+  id: string
+  variableId: string
+  name: string
+  value: number
+  unit: string
+  timestamp: string
+  type: string
+  icon: string
+  description: string
+  min: number
+  max: number
+}
+
 export default function MaliAgent() {
   const { language } = useUser()
+  const { readings } = useSensorData()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -26,6 +43,10 @@ export default function MaliAgent() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   const [voicesLoaded, setVoicesLoaded] = useState(false)
+  const [sensorData, setSensorData] = useState<ArduinoSensorReading[]>([])
+  const [formattedSensorData, setFormattedSensorData] = useState("")
+  const [soilHealth, setSoilHealth] = useState("")
+  const [showSensorData, setShowSensorData] = useState(false)
 
   const translations = {
     en: {
@@ -41,6 +62,10 @@ export default function MaliAgent() {
         "Market insights and optimal harvest timing recommendations",
         "Multilingual support for local language communication",
       ],
+      showSensorData: "Show Sensor Data",
+      hideSensorData: "Hide Sensor Data",
+      currentReadings: "Current Sensor Readings",
+      soilHealth: "Soil Health Assessment",
     },
     ur: {
       title: "مالی ایجنٹ اے آئی",
@@ -55,6 +80,10 @@ export default function MaliAgent() {
         "مارکیٹ کی بصیرت اور فصل کاٹنے کے بہترین وقت کی سفارشات",
         "مقامی زبان کی مواصلات کے لیے کثیر لسانی سپورٹ",
       ],
+      showSensorData: "سینسر ڈیٹا دکھائیں",
+      hideSensorData: "سینسر ڈیٹا چھپائیں",
+      currentReadings: "موجودہ سینسر ریڈنگز",
+      soilHealth: "مٹی کی صحت کا تجزیہ",
     },
   }
 
@@ -80,6 +109,83 @@ export default function MaliAgent() {
       .replace(/\*\*(.*?)\*\*/g, "$1") // Remove ** but keep the content bold
       .trim()
   }
+
+  // Fetch sensor data from Arduino API
+  const fetchSensorData = useCallback(async () => {
+    try {
+      const response = await fetch("/api/arduino-cloud")
+
+      if (!response.ok) {
+        throw new Error(`Arduino API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        console.log("Arduino data received for Mali Agent:", data.data)
+        setSensorData(data.data)
+
+        // Format sensor data for context
+        const formattedData = formatSensorDataForContext(data.data)
+        setFormattedSensorData(formattedData)
+
+        // Get soil health assessment
+        const healthAssessment = getSoilHealthAssessment(data.data)
+        setSoilHealth(healthAssessment)
+      } else {
+        console.warn("Arduino API returned no data or error:", data)
+        // Use existing readings as fallback
+        processSensorReadings()
+      }
+    } catch (error) {
+      console.error("Error fetching Arduino data for Mali Agent:", error)
+      // Use existing readings as fallback
+      processSensorReadings()
+    }
+  }, [])
+
+  // Process readings from context into sensor data (fallback)
+  const processSensorReadings = useCallback(() => {
+    if (readings.length === 0) return
+
+    // Group the most recent readings by sensor type
+    const latestReadings = new Map()
+
+    // Sort readings by timestamp (newest first)
+    const sortedReadings = [...readings].sort((a, b) => b.timestamp - a.timestamp)
+
+    // Get the latest reading for each sensor type
+    for (const reading of sortedReadings) {
+      if (!latestReadings.has(reading.sensorId)) {
+        latestReadings.set(reading.sensorId, reading)
+      }
+    }
+
+    // Convert to array format
+    const processedData = Array.from(latestReadings.values()).map((reading) => ({
+      id: reading.id,
+      variableId: reading.sensorId,
+      name: reading.sensorId,
+      value: reading.value,
+      unit: "",
+      timestamp: new Date(reading.timestamp).toISOString(),
+      type: reading.sensorId === "temp" || reading.sensorId === "humd" ? "environment" : "soil",
+      icon: "activity",
+      description: "",
+      min: 0,
+      max: 100,
+    }))
+
+    setSensorData(processedData)
+
+    // Format sensor data for context
+    const formattedData = formatSensorDataForContext(processedData)
+    setFormattedSensorData(formattedData)
+
+    // Get soil health assessment
+    const healthAssessment = getSoilHealthAssessment(processedData)
+    setSoilHealth(healthAssessment)
+  }, [readings])
 
   // Load and cache available voices
   useEffect(() => {
@@ -114,6 +220,17 @@ export default function MaliAgent() {
       }
     }
   }, [])
+
+  // Initial data fetch
+  useEffect(() => {
+    // Fetch sensor data on component mount
+    fetchSensorData()
+
+    // Set up interval to refresh sensor data every 60 seconds
+    const interval = setInterval(fetchSensorData, 60000)
+
+    return () => clearInterval(interval)
+  }, [fetchSensorData])
 
   // Find the best voice for the current language
   const getBestVoiceForLanguage = (lang: string): SpeechSynthesisVoice | null => {
@@ -254,8 +371,8 @@ export default function MaliAgent() {
     // Set initial welcome message in the selected language
     const welcomeMessage =
       language === "en"
-        ? "Hello! I'm Mali Agent, your agricultural AI assistant. How can I help with your farming needs today?"
-        : "السلام علیکم! میں مالی ایجنٹ ہوں، آپ کا زرعی اے آئی اسسٹنٹ۔ آج میں آپ کی کاشتکاری کی ضروریات میں کیسے مدد کر سکتا ہوں؟"
+        ? "Hello! I'm Mali Agent, your agricultural AI assistant. I now have access to your real-time soil sensor data. How can I help with your farming needs today?"
+        : "السلام علیکم! میں مالی ایجنٹ ہوں، آپ کا زرعی اے آئی اسسٹنٹ۔ اب میرے پاس آپ کے مٹی کے سینسر کا حقیقی وقت کا ڈیٹا ہے۔ آج میں آپ کی کاشتکاری کی ضروریات میں کیسے مدد کر سکتا ہوں؟"
 
     setMessages([
       {
@@ -349,13 +466,24 @@ export default function MaliAgent() {
     setIsLoading(true)
 
     try {
+      // Refresh sensor data before sending the request
+      await fetchSensorData()
+
+      console.log("Sending to chatbot API with sensor data:", {
+        query: userMessage,
+        language,
+        sensorData: formattedSensorData,
+        soilHealth,
+      })
+
       const response = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: userMessage,
           language: language,
-          maxLength: 4, // Request short responses (3-4 lines)
+          sensorData: formattedSensorData,
+          soilHealth: soilHealth,
         }),
       })
 
@@ -491,7 +619,7 @@ export default function MaliAgent() {
         </Card>
       </div>
 
-      <div>
+      <div className="space-y-4">
         <Card className="bg-gradient-to-b from-green-50 to-white">
           <CardHeader>
             <CardTitle>{t.howHelps}</CardTitle>
@@ -506,6 +634,39 @@ export default function MaliAgent() {
               </div>
             ))}
           </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-b from-blue-50 to-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex justify-between items-center">
+              <span>{t.currentReadings}</span>
+              <Button variant="ghost" size="sm" onClick={() => setShowSensorData(!showSensorData)} className="text-xs">
+                {showSensorData ? t.hideSensorData : t.showSensorData}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          {showSensorData && (
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Gauge className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium">{t.soilHealth}</span>
+                </div>
+                <p className="text-muted-foreground pl-6">{soilHealth}</p>
+
+                <div className="mt-4">
+                  {sensorData.map((sensor) => (
+                    <div key={sensor.id} className="flex justify-between items-center py-1 border-b border-gray-100">
+                      <span>{sensor.name}:</span>
+                      <span className="font-medium">
+                        {sensor.value.toFixed(1)} {sensor.unit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
       </div>
     </div>
