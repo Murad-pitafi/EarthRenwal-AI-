@@ -178,7 +178,7 @@ importers:
         version: 1.4.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       langchain:
         specifier: latest
-        version: 0.3.25(0ab1fa1e830129008fc68e7b4b82882d)
+        version: 0.3.25(53cdfc9cd2f1ae6e0e19512b685af556)
       lucide-react:
         specifier: ^0.454.0
         version: 0.454.0(react@19.0.0)
@@ -226,7 +226,7 @@ importers:
         version: 1.0.7(tailwindcss@3.4.17)
       typeorm:
         specifier: latest
-        version: 0.3.23(reflect-metadata@0.2.2)
+        version: 0.3.24(reflect-metadata@0.2.2)
       util:
         specifier: latest
         version: 0.12.5
@@ -2334,6 +2334,14 @@ packages:
   decimal.js-light@2.5.1:
     resolution: {integrity: sha512-qIMFpTMZmny+MMIitAB6D7iVPEorVw6YQRWkvarTkT4tBeSLLiHzcwj6q0MmYSFCiVpiqPJTJEYIrpcPzVEIvg==}
 
+  dedent@1.6.0:
+    resolution: {integrity: sha512-F1Z+5UCFpmQUzJa11agbyPVMbpgT/qA3/SKyJ1jyBgm7dUcUEa8v9JwDkerSQXfakBwFljIxhOJqGkjUwZ9FSA==}
+    peerDependencies:
+      babel-plugin-macros: ^3.1.0
+    peerDependenciesMeta:
+      babel-plugin-macros:
+        optional: true
+
   define-data-property@1.1.4:
     resolution: {integrity: sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==}
     engines: {node: '>= 0.4'}
@@ -3496,8 +3504,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  typeorm@0.3.23:
-    resolution: {integrity: sha512-CJUZWW7O5zZG0TA7bRpntJx97AvvQwsoSa1UgYlzTOtmkwODrqIyxP9wtzHpBssEKie5chnLiCVyxKNeYo65wQ==}
+  typeorm@0.3.24:
+    resolution: {integrity: sha512-4IrHG7A0tY8l5gEGXfW56VOMfUVWEkWlH/h5wmcyZ+V8oCiLj7iTPp0lEjMEZVrxEkGSdP9ErgTKHKXQApl/oA==}
     engines: {node: '>=16.13.0'}
     hasBin: true
     peerDependencies:
@@ -6435,6 +6443,8 @@ snapshots:
 
   decimal.js-light@2.5.1: {}
 
+  dedent@1.6.0: {}
+
   define-data-property@1.1.4:
     dependencies:
       es-define-property: 1.0.1
@@ -6952,7 +6962,7 @@ snapshots:
       jwa: 2.0.1
       safe-buffer: 5.2.1
 
-  langchain@0.3.25(0ab1fa1e830129008fc68e7b4b82882d):
+  langchain@0.3.25(53cdfc9cd2f1ae6e0e19512b685af556):
     dependencies:
       '@langchain/core': 0.3.55(openai@4.98.0(zod@3.24.1))
       '@langchain/openai': 0.5.10(@langchain/core@0.3.55(openai@4.98.0(zod@3.24.1)))
@@ -6984,7 +6994,7 @@ snapshots:
       cheerio: 1.0.0
       handlebars: 4.7.8
       peggy: 5.0.2
-      typeorm: 0.3.23(reflect-metadata@0.2.2)
+      typeorm: 0.3.24(reflect-metadata@0.2.2)
     transitivePeerDependencies:
       - encoding
       - openai
@@ -7669,7 +7679,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  typeorm@0.3.23(reflect-metadata@0.2.2):
+  typeorm@0.3.24(reflect-metadata@0.2.2):
     dependencies:
       '@sqltools/formatter': 1.2.5
       ansis: 3.17.0
@@ -7677,6 +7687,7 @@ snapshots:
       buffer: 6.0.3
       dayjs: 1.11.13
       debug: 4.4.1
+      dedent: 1.6.0
       dotenv: 16.5.0
       glob: 10.4.5
       reflect-metadata: 0.2.2
@@ -7686,6 +7697,7 @@ snapshots:
       uuid: 11.1.0
       yargs: 17.7.2
     transitivePeerDependencies:
+      - babel-plugin-macros
       - supports-color
 
   typescript@5.0.2: {}
