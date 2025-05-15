@@ -19,6 +19,7 @@ import {
   Database,
   FlaskRound,
   Info,
+  Briefcase,
 } from "lucide-react"
 import Image from "next/image"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -43,6 +44,7 @@ export function Navigation() {
       dataManagement: "Data Management",
       soilTest: "Soil Test",
       about: "About",
+      careers: "Careers",
     },
     ur: {
       home: "ہوم",
@@ -57,6 +59,7 @@ export function Navigation() {
       dataManagement: "ڈیٹا مینجمنٹ",
       soilTest: "مٹی کا ٹیسٹ",
       about: "ہمارے بارے میں",
+      careers: "کیریئرز",
     },
   }
 
@@ -97,6 +100,11 @@ export function Navigation() {
       href: "/weather",
       label: t.weather,
       icon: Cloud,
+    },
+    {
+      href: "/careers",
+      label: t.careers,
+      icon: Briefcase,
     },
     {
       href: "/contact",
