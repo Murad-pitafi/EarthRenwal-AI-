@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Briefcase, School, User, Lightbulb, BookOpen } from "lucide-react"
+import { Briefcase, Lightbulb, ExternalLink } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export const metadata: Metadata = {
   title: "Careers | EarthRenewal.AI",
@@ -27,9 +28,9 @@ export default function CareersPage() {
           </CardHeader>
           <CardContent className="pt-6">
             <p className="mb-6">
-              We welcome students from various departments who are passionate about sustainable agriculture, technology,
-              and making a positive impact. Our internships are designed to provide real-world experience while
-              contributing to meaningful projects.
+              We welcome students who are passionate about sustainable agriculture, technology, and making a positive
+              impact. Our internships are designed to provide real-world experience while contributing to meaningful
+              projects.
             </p>
 
             <div className="mb-6">
@@ -88,44 +89,21 @@ export default function CareersPage() {
 
         <div className="bg-green-50 p-6 rounded-lg mb-12">
           <h2 className="text-xl font-semibold mb-4">How to Apply</h2>
-          <p className="mb-4">
-            Send an email to{" "}
-            <a href="mailto:earthrenewalai@gmail.com" className="text-green-600 font-medium">
-              earthrenewalai@gmail.com
-            </a>{" "}
-            with the following information:
+          <p className="mb-6">
+            Complete our application form by clicking the button below. You'll need to provide your basic information
+            and area of interest.
           </p>
 
-          <ul className="space-y-3 mb-6">
-            <li className="flex items-start gap-3">
-              <User className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <span className="font-medium">Full Name</span>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <School className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <span className="font-medium">Department</span>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <Lightbulb className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <span className="font-medium">Area of Interest</span>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <BookOpen className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <span className="font-medium">Semester Number</span>
-              </div>
-            </li>
-          </ul>
+          <div className="flex justify-center mb-6">
+            <a href="https://forms.gle/1o6WXzPzWL9Yk6ek6" target="_blank" rel="noopener noreferrer">
+              <Button className="bg-green-600 hover:bg-green-700 flex items-center gap-2">
+                Apply Now <ExternalLink className="h-4 w-4" />
+              </Button>
+            </a>
+          </div>
 
-          <p className="text-sm text-gray-600">
-            Please include "Internship Application" in the subject line. We'll review your application and get back to
-            you soon!
+          <p className="text-sm text-gray-600 text-center">
+            Applications are reviewed on a rolling basis. We'll contact selected candidates for the next steps.
           </p>
         </div>
       </div>
